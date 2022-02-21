@@ -6,9 +6,9 @@ from scipy import sparse
 import matplotlib.pyplot as plt
 
 
-class SpareSmoothSignal:
+class SparseSmoothSignal:
     """
-    Base class for the spare and smooth signal.
+    Base class for the sparse and smooth signal.
 
     The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth
     yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x
