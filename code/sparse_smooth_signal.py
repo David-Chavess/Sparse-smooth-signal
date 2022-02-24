@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Tuple
+
 import numpy as np
 from scipy.linalg import dft
 from scipy import sparse
@@ -41,27 +43,27 @@ class SparseSmoothSignal:
     Methods
     -------
     random_sparse() -> None
-        Creates a new random sparse componant
+        Creates a new random sparse component
     random_smooth() -> None
-        Creates a new random smooth componant
+        Creates a new random smooth component
     random_measurement_operator(size: int) -> None
-        Creates a new random measurement operator base on size random lines of the DFT matrix
+        Creates a new random measurement operator with size random lines of the DFT matrix
     gaussian_noise(variance: np.float64 = None) -> None:
         Creates a new gaussian white noise
-    draw_sparse() -> None
-        plot the sparse componant
-    draw_smooth() -> None
-        plot the smooth componant
-    draw_x() -> None
-        plot the signal x
-    draw_y0() -> None
-        plot the signal y0
-    draw_y() -> None
-        plot the signal y
-    draw_noise() -> None
-        plot the noise
+    plot_sparse() -> None
+        Plot the sparse component
+    plot_smooth() -> None
+        Plot the smooth component
+    plot_x() -> None
+        Plot the signal x
+    plot_y0() -> None
+        Plot the signal y0
+    plot_y() -> None
+        Plot the signal y
+    plot_noise() -> None
+        Plot the noise
     show() -> None
-        used to show the ploted signals, it is used after all draw_() fonctions
+        Show the plotted signals, it is used after all draw_?() functions
     """
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
@@ -154,16 +156,30 @@ class SparseSmoothSignal:
         return self.__noise
 
     def random_sparse(self) -> None:
+        """
+        Creates a new random sparse component with a density of 25%
+        """
         self.__sparse = sparse.random(self.__dim[0], self.__dim[1], density=0.25, data_rvs=np.random.randn)\
             .toarray().ravel()
 
     def random_smooth(self) -> None:
+        """
+        Creates a new random smooth component
+        """
         amp = np.random.randint(0, 5, 2)
         freq = 2*np.pi*np.random.rand(2)
         t = np.linspace(0, self.__size/10, self.__size)
         self.__smooth = amp[0]*np.sin(t/freq[0]) + amp[1]*np.cos(t/freq[1])
 
     def random_measurement_operator(self, size: int) -> None:
+        """
+        Creates a new random measurement operator with size random lines of the DFT matrix
+
+        Parameters
+        ----------
+        size :
+            Numbers of lines of the DFT matrix we want to pick, witch is also the new dimension of y
+        """
         assert self.__size >= size >= 0
         self.__y_size = size
         dft_mtx = dft(self.__size)
@@ -172,31 +188,63 @@ class SparseSmoothSignal:
         self.__noise = None
 
     def gaussian_noise(self, variance: np.float64 = None) -> None:
+        """
+        Creates a new gaussian white noise
+
+        Parameters
+        ----------
+        variance :
+            Variance of the gaussian white noise
+            if None then we choose the last input
+            if the variance was never changed we take 1
+        """
         if variance is None:
             variance = self.__variance
         else:
             self.__variance = variance
         self.__noise = np.random.normal(0, variance, self.__y_size)
 
-    def draw_sparse(self) -> None:
+    def plot_sparse(self) -> None:
+        """
+        Plot the sparse component
+        """
         plt.plot(self.sparse, label="sparse")
 
-    def draw_smooth(self) -> None:
+    def plot_smooth(self) -> None:
+        """
+        Plot the smooth component
+        """
         plt.plot(self.smooth, label="smooth")
 
-    def draw_x(self) -> None:
+    def plot_x(self) -> None:
+        """
+        Plot the signal x
+        """
         plt.plot(self.x, label="x")
 
-    def draw_y0(self) -> None:
+    def plot_y0(self) -> None:
+        """
+        Plot the signal y0
+        """
         plt.plot(self.y0, label="y0")
 
-    def draw_y(self) -> None:
+    def plot_y(self) -> None:
+        """
+        Plot the signal y
+        """
         plt.plot(self.y, label="y")
 
-    def draw_noise(self) -> None:
+    def plot_noise(self) -> None:
+        """
+        Plot the noise
+        """
         plt.plot(self.noise, label="noise")
 
-    def show(self) -> None:
+    @staticmethod
+    def show() -> None:
+        """
+        Show the plotted signals, it is used after all draw_?() functions
+        """
         plt.title("Spare + Smooth Signal")
         plt.ylabel("Amplitude")
         plt.legend(loc="best")
