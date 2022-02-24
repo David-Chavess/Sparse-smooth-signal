@@ -4,7 +4,7 @@ from typing import Tuple
 
 import numpy as np
 from scipy.linalg import dft
-from scipy import sparse
+from scipy.sparse as sp
 import matplotlib.pyplot as plt
 
 
@@ -50,20 +50,8 @@ class SparseSmoothSignal:
         Creates a new random measurement operator with size random lines of the DFT matrix
     gaussian_noise(variance: np.float64 = None) -> None:
         Creates a new gaussian white noise
-    plot_sparse() -> None
-        Plot the sparse component
-    plot_smooth() -> None
-        Plot the smooth component
-    plot_x() -> None
-        Plot the signal x
-    plot_y0() -> None
-        Plot the signal y0
-    plot_y() -> None
-        Plot the signal y
-    plot_noise() -> None
-        Plot the noise
-    show() -> None
-        Show the plotted signals, it is used after all draw_?() functions
+    plot() -> None
+        Plot all signals in 2d
     """
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
@@ -95,15 +83,19 @@ class SparseSmoothSignal:
 
         if sparse is not None:
             assert sparse.shape == dim, "Sparse is not the same shape as dim"
-            self.__sparse = sparse.ravel()
+            self.__sparse = sparse
         else:
             self.random_sparse()
 
         if smooth is not None:
             assert smooth.shape == dim, "Smooth is not the same size as dim"
-            self.__smooth = smooth.ravel()
+            self.__smooth = smooth
         else:
             self.random_smooth()
+
+        self.__variance = variance
+        self.__noise = None
+        self.gaussian_noise()
 
         if measurement_operator is not None:
             assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
@@ -111,9 +103,8 @@ class SparseSmoothSignal:
         else:
             self.random_measurement_operator(self.__y_size)
 
-        self.__variance = variance
-        self.__noise = None
-        self.gaussian_noise()
+        fig, ((self.__ax1, self.__ax2, self.__ax3), (self.__ax4, self.__ax5, self.__ax6)) = plt.subplots(2, 3)
+        fig.suptitle("Spare + Smooth Signal")
 
     @property
     def dim(self) -> Tuple[int, int]:
@@ -141,15 +132,11 @@ class SparseSmoothSignal:
 
     @property
     def y0(self) -> np.ndarray:
-        if self.__measurement_operator is not None:
-            return self.H @ self.x
-        return None
+        return self.H @ self.x.ravel()
 
     @property
     def y(self) -> np.ndarray:
-        if self.__noise is not None:
-            return self.y0 + self.__noise
-        return None
+        return self.y0 + self.__noise
 
     @property
     def noise(self) -> np.ndarray:
@@ -157,19 +144,25 @@ class SparseSmoothSignal:
 
     def random_sparse(self) -> None:
         """
-        Creates a new random sparse component with a density of 25%
+        Creates a new random sparse component with a density of 5%
         """
-        self.__sparse = sparse.random(self.__dim[0], self.__dim[1], density=0.25, data_rvs=np.random.randn)\
-            .toarray().ravel()
+        self.__sparse = sp.random(self.__dim[0], self.__dim[1], density=0.05, data_rvs=np.random.randn).toarray()
 
     def random_smooth(self) -> None:
         """
         Creates a new random smooth component
         """
-        amp = np.random.randint(0, 5, 2)
-        freq = 2*np.pi*np.random.rand(2)
-        t = np.linspace(0, self.__size/10, self.__size)
-        self.__smooth = amp[0]*np.sin(t/freq[0]) + amp[1]*np.cos(t/freq[1])
+        self.__smooth = np.zeros(self.__dim)
+        # number of gaussian we create
+        nb = int(0.05 * self.__size)
+        for i in range(nb):
+            # Random center of a gaussian
+            a, b = np.random.uniform(-1, 1), np.random.uniform(-1, 1)
+            x, y = np.meshgrid(np.linspace(a - 1, a + 1, self.__dim[1]), np.linspace(b - 1, b + 1, self.__dim[0]))
+            var = 1 - np.abs(np.random.normal(0, 1))
+            g = np.exp(-((np.sqrt(x * x + y * y)) ** 2 / (2.0 * var ** 2)))
+            self.__smooth += g
+        self.__smooth / nb
 
     def random_measurement_operator(self, size: int) -> None:
         """
@@ -185,7 +178,7 @@ class SparseSmoothSignal:
         dft_mtx = dft(self.__size)
         rand = np.random.choice(self.__size, size, replace=False)
         self.__measurement_operator = dft_mtx[rand]
-        self.__noise = None
+        self.gaussian_noise()
 
     def gaussian_noise(self, variance: np.float64 = None) -> None:
         """
@@ -204,48 +197,20 @@ class SparseSmoothSignal:
             self.__variance = variance
         self.__noise = np.random.normal(0, variance, self.__y_size)
 
-    def plot_sparse(self) -> None:
+    def plot(self) -> None:
         """
-        Plot the sparse component
+        Plot all signals in 2d
         """
-        plt.plot(self.sparse, label="sparse")
-
-    def plot_smooth(self) -> None:
-        """
-        Plot the smooth component
-        """
-        plt.plot(self.smooth, label="smooth")
-
-    def plot_x(self) -> None:
-        """
-        Plot the signal x
-        """
-        plt.plot(self.x, label="x")
-
-    def plot_y0(self) -> None:
-        """
-        Plot the signal y0
-        """
-        plt.plot(self.y0, label="y0")
-
-    def plot_y(self) -> None:
-        """
-        Plot the signal y
-        """
-        plt.plot(self.y, label="y")
-
-    def plot_noise(self) -> None:
-        """
-        Plot the noise
-        """
-        plt.plot(self.noise, label="noise")
-
-    @staticmethod
-    def show() -> None:
-        """
-        Show the plotted signals, it is used after all draw_?() functions
-        """
-        plt.title("Spare + Smooth Signal")
-        plt.ylabel("Amplitude")
-        plt.legend(loc="best")
+        self.__ax1.imshow(self.x)
+        self.__ax1.set_title("X")
+        self.__ax2.imshow(self.smooth)
+        self.__ax2.set_title("Smooth")
+        self.__ax3.imshow(self.sparse)
+        self.__ax3.set_title("Sparse")
+        self.__ax4.plot(self.y.reshape(self.__dim))
+        self.__ax4.set_title("Y")
+        self.__ax5.plot(self.y0.reshape(self.__dim))
+        self.__ax5.set_title("Y0")
+        self.__ax6.imshow(self.noise.reshape(self.__dim))
+        self.__ax6.set_title("Noise")
         plt.show()
