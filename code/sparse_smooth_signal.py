@@ -4,7 +4,7 @@ from typing import Tuple
 
 import numpy as np
 from scipy.linalg import dft
-from scipy.sparse as sp
+import scipy.sparse as sp
 import matplotlib.pyplot as plt
 
 
