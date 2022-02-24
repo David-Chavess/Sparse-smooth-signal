@@ -52,6 +52,9 @@ class SparseSmoothSignal:
         Creates a new gaussian white noise
     plot() -> None
         Plot all signals in 2d
+    show() -> None
+        Show the plotted signals, it is used after plot()
+        needed if we want to plot multiple SparseSmoothSignal
     """
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
@@ -158,11 +161,11 @@ class SparseSmoothSignal:
         for i in range(nb):
             # Random center of a gaussian
             a, b = np.random.uniform(-1, 1), np.random.uniform(-1, 1)
+            # Random gaussian at (a, b)
             x, y = np.meshgrid(np.linspace(a - 1, a + 1, self.__dim[1]), np.linspace(b - 1, b + 1, self.__dim[0]))
-            var = 1 - np.abs(np.random.normal(0, 1))
-            g = np.exp(-((np.sqrt(x * x + y * y)) ** 2 / (2.0 * var ** 2)))
+            var = np.abs(np.random.normal(1, 4))
+            g = np.exp(-((np.sqrt(x * x + y * y) ** 2) / (2.0 * var))) / (np.sqrt(2 * np.pi * var))
             self.__smooth += g
-        self.__smooth / nb
 
     def random_measurement_operator(self, size: int) -> None:
         """
@@ -213,4 +216,12 @@ class SparseSmoothSignal:
         self.__ax5.set_title("Y0")
         self.__ax6.imshow(self.noise.reshape(self.__dim))
         self.__ax6.set_title("Noise")
+
+    @staticmethod
+    def show() -> None:
+        """
+        Show the plotted signals, it is used after plot()
+        needed if we want to plot multiple SparseSmoothSignal
+        """
         plt.show()
+
