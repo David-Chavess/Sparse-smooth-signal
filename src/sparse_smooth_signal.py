@@ -30,8 +30,8 @@ class SparseSmoothSignal:
         matrix representing the linear sensing measurement operator used
     H : np.ndarray 
         alias for measurement_operator
-    variance : np.float64
-        variance of the gaussian white noise added 
+    psnr : np.float64
+         peak signal-to-noise ratio of the gaussian white noise added
     noise :
         gaussian white noise added
     yo : np.ndarray
@@ -47,7 +47,7 @@ class SparseSmoothSignal:
         Creates a new random smooth component
     random_measurement_operator(size: int) -> None
         Creates a new random measurement operator with size random lines of the DFT matrix
-    gaussian_noise(variance: np.float64 = None) -> None:
+    gaussian_noise(psnr: np.float64 = None) -> None:
         Creates a new gaussian white noise
     plot() -> None
         Plot all signals in 2d
@@ -60,7 +60,7 @@ class SparseSmoothSignal:
     __operators = {}
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | np.ndarray = None, variance: np.float64 = 1):
+                 measurement_operator: None | np.ndarray = None, psnr: np.float64 = 10):
         """
         Parameters
         ----------
@@ -72,8 +72,8 @@ class SparseSmoothSignal:
             matrix representing the smooth part of the signal
         measurement_operator : None | np.ndarray 
             matrix representing the linear sensing measurement operator used
-        variance : np.float64
-            variance of the gaussian white noise added 
+        psnr : np.float64
+            peak signal-to-noise ratio of the gaussian white noise added
 
         For any optionnal argumant if not specified the corresponding value will be random 
         except variance which is 1 by default
@@ -98,15 +98,16 @@ class SparseSmoothSignal:
         else:
             self.random_smooth()
 
-        self.__variance = variance
+        self.__psnr = psnr
         self.__noise = None
-        self.gaussian_noise()
 
         if measurement_operator is not None:
             assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
             self.__measurement_operator = measurement_operator
         else:
             self.random_measurement_operator(self.__y_size)
+
+        self.gaussian_noise()
 
         fig, ((self.__ax1, self.__ax2), (self.__ax3, self.__ax4)) = plt.subplots(2, 2)
         fig.suptitle("Spare + Smooth Signal")
@@ -192,22 +193,28 @@ class SparseSmoothSignal:
         self.__measurement_operator = op[rand]
         self.gaussian_noise()
 
-    def gaussian_noise(self, variance: np.float64 = None) -> None:
+    def gaussian_noise(self, psnr: np.float64 = None) -> None:
         """
         Creates a new gaussian white noise
 
         Parameters
         ----------
-        variance :
-            Variance of the gaussian white noise
+        psnr :
+            peak signal-to-noise ratio of the gaussian white noise
             if None then we choose the last input
-            if the variance was never changed we take 1
+            if the psnr was never changed we take 10
         """
-        if variance is None:
-            variance = self.__variance
+        if psnr is None:
+            psnr = self.__psnr
         else:
-            self.__variance = variance
-        self.__noise = np.random.normal(0, variance, self.__y_size)
+            self.__psnr = psnr
+        # mean squared error in decibel
+        mse_db = 20 * np.log10(np.real(np.max(self.y0))) - psnr
+        # convert mean squared error  from db to watts
+        mse = 10 ** (mse_db / 10)
+        ##TODO
+
+        self.__noise = np.random.normal(0, np.sqrt(mse), self.__y_size)
 
     def plot(self) -> None:
         """
@@ -244,3 +251,9 @@ class SparseSmoothSignal:
         # flatten the two last dimensions
         operator = dtf_2d.reshape(dim[0] * dim[1], dim[0] * dim[1])
         return operator
+
+
+if __name__ == '__main__':
+    s = SparseSmoothSignal((10, 10))
+    s.plot()
+    s.show()
