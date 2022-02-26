@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Tuple
 
 import numpy as np
-from scipy.linalg import dft
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
 
@@ -57,6 +56,9 @@ class SparseSmoothSignal:
         needed if we want to plot multiple SparseSmoothSignal
     """
 
+    # cache measurements operators
+    __operators = {}
+
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
                  measurement_operator: None | np.ndarray = None, variance: np.float64 = 1):
         """
@@ -106,7 +108,7 @@ class SparseSmoothSignal:
         else:
             self.random_measurement_operator(self.__y_size)
 
-        fig, ((self.__ax1, self.__ax2, self.__ax3), (self.__ax4, self.__ax5, self.__ax6)) = plt.subplots(2, 3)
+        fig, ((self.__ax1, self.__ax2), (self.__ax3, self.__ax4)) = plt.subplots(2, 2)
         fig.suptitle("Spare + Smooth Signal")
 
     @property
@@ -178,9 +180,16 @@ class SparseSmoothSignal:
         """
         assert self.__size >= size >= 0
         self.__y_size = size
-        dft_mtx = dft(self.__size)
         rand = np.random.choice(self.__size, size, replace=False)
-        self.__measurement_operator = dft_mtx[rand]
+        if self.__dim in self.__operators.keys():
+            op = self.__operators[self.__dim]
+        else:
+            op = self.create_measurement_operator(self.__dim)
+            if len(self.__operators) > 10:
+                self.__operators.popitem()
+            else:
+                self.__operators[self.__dim] = op
+        self.__measurement_operator = op[rand]
         self.gaussian_noise()
 
     def gaussian_noise(self, variance: np.float64 = None) -> None:
@@ -210,15 +219,11 @@ class SparseSmoothSignal:
         self.__ax2.set_title("Smooth")
         self.__ax3.imshow(self.sparse)
         self.__ax3.set_title("Sparse")
-        self.__ax4.plot(self.y.reshape(self.__dim))
-        self.__ax4.set_title("Y")
-        self.__ax5.plot(self.y0.reshape(self.__dim))
-        self.__ax5.set_title("Y0")
-        self.__ax6.imshow(self.noise.reshape(self.__dim))
-        self.__ax6.set_title("Noise")
+        self.__ax4.imshow(self.noise.reshape(self.__dim))
+        self.__ax4.set_title("Noise")
 
-    @staticmethod
-    def show() -> None:
+    @classmethod
+    def show(cls) -> None:
         """
         Show the plotted signals, it is used after plot()
         needed if we want to plot multiple SparseSmoothSignal
@@ -239,14 +244,3 @@ class SparseSmoothSignal:
         # flatten the two last dimensions
         operator = dtf_2d.reshape(dim[0] * dim[1], dim[0] * dim[1])
         return operator
-
-    @staticmethod
-    def test_operator() -> None:
-        dim = (100, 100)
-        operator = SparseSmoothSignal.create_measurement_operator(dim)
-        vec = np.random.randint(1000, size=dim)
-        assert np.allclose((operator @ vec.ravel()).reshape(dim), np.fft.fft2(vec))
-
-
-if __name__ == '__main__':
-    SparseSmoothSignal.test_operator()
