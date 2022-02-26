@@ -225,3 +225,19 @@ class SparseSmoothSignal:
         """
         plt.show()
 
+    @staticmethod
+    def create_measurement_operator(dim: Tuple[int, int]) -> np.ndarray:
+        # we create 100 images of dimension dim
+        base = np.zeros((dim[0] * dim[1], dim[0], dim[1]))
+        # we create the indexing array to put ones at the right place to create the bases
+        index_img = np.arange(0, dim[0] * dim[1])
+        index_x = np.kron(np.arange(0, dim[0]), np.ones(dim[0], dtype=int))
+        index_y = np.kron(np.ones(dim[1], dtype=int), np.arange(0, dim[1]))
+        base[index_img, index_x, index_y] = 1
+        # compute fft2 over the two last dimension
+        dtf_2d = np.fft.fft2(base)
+        # flatten the two last dimensions
+        operator = dtf_2d.reshape(dim[0] * dim[1], dim[0] * dim[1])
+        return operator
+
+
