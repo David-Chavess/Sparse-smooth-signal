@@ -240,4 +240,13 @@ class SparseSmoothSignal:
         operator = dtf_2d.reshape(dim[0] * dim[1], dim[0] * dim[1])
         return operator
 
+    @staticmethod
+    def test_operator() -> None:
+        dim = (100, 100)
+        operator = SparseSmoothSignal.create_measurement_operator(dim)
+        vec = np.random.randint(1000, size=dim)
+        assert np.allclose((operator @ vec.ravel()).reshape(dim), np.fft.fft2(vec))
 
+
+if __name__ == '__main__':
+    SparseSmoothSignal.test_operator()
