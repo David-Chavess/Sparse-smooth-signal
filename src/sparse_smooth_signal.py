@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Tuple
 
 import numpy as np
-import scipy.sparse as sp
+from scipy import sparse
 import matplotlib.pyplot as plt
+from pycsou.linop.sampling import MappedDistanceMatrix
 
 
 class SparseSmoothSignal:
@@ -109,8 +110,8 @@ class SparseSmoothSignal:
 
         self.gaussian_noise()
 
-        fig, ((self.__ax1, self.__ax2), (self.__ax3, self.__ax4)) = plt.subplots(2, 2)
-        fig.suptitle("Spare + Smooth Signal")
+        self.__fig, ((self.__ax1, self.__ax2), (self.__ax3, self.__ax4)) = plt.subplots(2, 2)
+        self.__fig.suptitle("Spare + Smooth Signal")
 
     @property
     def dim(self) -> Tuple[int, int]:
@@ -130,7 +131,7 @@ class SparseSmoothSignal:
 
     @property
     def x(self) -> np.ndarray:
-        return self.__sparse + self.__smooth
+        return self.__sparse.toarray() + self.__smooth
 
     @property
     def H(self) -> np.ndarray:
@@ -150,25 +151,38 @@ class SparseSmoothSignal:
 
     def random_sparse(self) -> None:
         """
-        Creates a new random sparse component with a density of 5%
+        Creates a new random sparse component
         """
-        self.__sparse = sp.random(self.__dim[0], self.__dim[1], density=0.05, data_rvs=np.random.randn).toarray()
+        rand_matrix = 4 * sparse.rand(self.__dim[0], self.__dim[1], density=0.005)
+        rand_matrix.data += 2
+        self.__sparse = rand_matrix
 
     def random_smooth(self) -> None:
         """
         Creates a new random smooth component
         """
-        self.__smooth = np.zeros(self.__dim)
         # number of gaussian we create
-        nb = int(0.05 * self.__size)
-        for i in range(nb):
-            # Random center of a gaussian
-            a, b = np.random.uniform(-1, 1), np.random.uniform(-1, 1)
-            # Random gaussian at (a, b)
-            x, y = np.meshgrid(np.linspace(a - 1, a + 1, self.__dim[1]), np.linspace(b - 1, b + 1, self.__dim[0]))
-            var = np.abs(np.random.normal(1, 4))
-            g = np.exp(-((np.sqrt(x * x + y * y) ** 2) / (2.0 * var))) / (np.sqrt(2 * np.pi * var))
-            self.__smooth += g
+        nb = int(0.005 * self.__size)
+
+        # grid
+        x = np.linspace(-1, 1, self.__dim[0])
+        y = np.linspace(-1, 1, self.__dim[1])
+        x, y = np.meshgrid(x, y)
+        samples1 = np.stack((x.flatten(), y.flatten()), axis=-1)
+        # random gaussian's centers
+        rng = np.random.default_rng()
+        samples2 = np.stack((2 * rng.random(size=nb) - 1, 2 * rng.random(size=nb) - 1), axis=-1)
+
+        sigma = 1/5
+        # used to reduce computation time
+        max_distance = 3 * sigma
+        # gaussian
+        func = lambda x: np.exp(-x ** 2 / (2 * sigma ** 2))
+        MDMOp = MappedDistanceMatrix(samples1=samples1, samples2=samples2, function=func, max_distance=max_distance,
+                                     operator_type='dask')
+        alpha = np.ones(samples2.shape[0])
+        m = MDMOp * alpha
+        self.__smooth = (m / np.max(m)).reshape(self.__dim[0], self.__dim[1])
 
     def random_measurement_operator(self, size: int) -> None:
         """
@@ -210,7 +224,7 @@ class SparseSmoothSignal:
             self.__psnr = psnr
         # mean squared error in decibel
         mse_db = 20 * np.log10(np.real(np.max(self.y0))) - psnr
-        # convert mean squared error  from db to watts
+        # convert mean squared error from db to watts
         mse = 10 ** (mse_db / 10)
         ##TODO
 
@@ -220,14 +234,25 @@ class SparseSmoothSignal:
         """
         Plot all signals in 2d
         """
-        self.__ax1.imshow(self.x)
+        im = self.__ax1.imshow(self.x)
         self.__ax1.set_title("X")
-        self.__ax2.imshow(self.smooth)
+        self.__ax1.axis('off')
+        self.__fig.colorbar(im, ax=self.__ax1)
+
+        im = self.__ax2.imshow(self.smooth)
         self.__ax2.set_title("Smooth")
-        self.__ax3.imshow(self.sparse)
+        self.__ax2.axis('off')
+        self.__fig.colorbar(im, ax=self.__ax2)
+
+        im = self.__ax3.imshow(self.sparse.toarray())
         self.__ax3.set_title("Sparse")
-        self.__ax4.imshow(self.noise.reshape(self.__dim))
+        self.__ax3.axis('off')
+        self.__fig.colorbar(im, ax=self.__ax3)
+
+        im = self.__ax4.imshow(self.noise.reshape(self.__dim))
         self.__ax4.set_title("Noise")
+        self.__ax4.axis('off')
+        self.__fig.colorbar(im, ax=self.__ax4)
 
     @classmethod
     def show(cls) -> None:
@@ -251,9 +276,3 @@ class SparseSmoothSignal:
         # flatten the two last dimensions
         operator = dtf_2d.reshape(dim[0] * dim[1], dim[0] * dim[1])
         return operator
-
-
-if __name__ == '__main__':
-    s = SparseSmoothSignal((10, 10))
-    s.plot()
-    s.show()
