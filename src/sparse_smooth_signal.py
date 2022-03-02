@@ -61,7 +61,7 @@ class SparseSmoothSignal:
     __operators = {}
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | np.ndarray = None, psnr: np.float64 = 10):
+                 measurement_operator: None | np.ndarray = None, psnr: np.float64 = 50):
         """
         Parameters
         ----------
@@ -107,8 +107,6 @@ class SparseSmoothSignal:
             self.__measurement_operator = measurement_operator
         else:
             self.random_measurement_operator(self.__y_size)
-
-        self.gaussian_noise()
 
         self.__fig, ((self.__ax1, self.__ax2), (self.__ax3, self.__ax4)) = plt.subplots(2, 2)
         self.__fig.suptitle("Spare + Smooth Signal")
@@ -222,13 +220,14 @@ class SparseSmoothSignal:
             psnr = self.__psnr
         else:
             self.__psnr = psnr
+        y0_max = np.max(np.abs(self.y0))
         # mean squared error in decibel
-        mse_db = 20 * np.log10(np.real(np.max(self.y0))) - psnr
+        mse_db = 20 * np.log10(y0_max) - psnr
         # convert mean squared error from db to watts
         mse = 10 ** (mse_db / 10)
-        ##TODO
 
-        self.__noise = np.random.normal(0, np.sqrt(mse), self.__y_size)
+        # mse is the variance of the noise and since it is a complex gaussian the variance is halved
+        self.__noise = np.random.normal(0, np.sqrt(mse / 2), (self.__y_size, 2)).view(np.complex128)
 
     def plot(self) -> None:
         """
