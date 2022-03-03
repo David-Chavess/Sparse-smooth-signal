@@ -87,6 +87,14 @@ class SparseSmoothSignal:
         # length of the output signal y
         self.__y_size = self.__size
 
+        self.__psnr = psnr
+
+        # cache
+        self.__x = None
+        self.__y0 = None
+        self.__y = None
+        self.__noise = None
+
         if sparse is not None:
             assert sparse.shape == dim, "Sparse is not the same shape as dim"
             self.__sparse = sparse
@@ -99,17 +107,11 @@ class SparseSmoothSignal:
         else:
             self.random_smooth()
 
-        self.__psnr = psnr
-        self.__noise = None
-
         if measurement_operator is not None:
             assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
             self.__measurement_operator = measurement_operator
         else:
-            self.random_measurement_operator(self.__y_size)
-
-        self.__fig, ((self.__ax1, self.__ax2), (self.__ax3, self.__ax4)) = plt.subplots(2, 2)
-        self.__fig.suptitle("Spare + Smooth Signal")
+            self.random_measurement_operator()
 
     @property
     def dim(self) -> Tuple[int, int]:
@@ -117,35 +119,75 @@ class SparseSmoothSignal:
 
     @property
     def sparse(self) -> np.ndarray:
-        return self.__sparse
+        return self.__sparse.toarray()
+
+    @sparse.setter
+    def sparse(self, value: np.ndarray) -> None:
+        self.__sparse = value
+        # delete deprecated cached values
+        self.__x = None
+        self.__y0 = None
+        self.__y = None
 
     @property
     def smooth(self) -> np.ndarray:
         return self.__smooth
 
+    @smooth.setter
+    def smooth(self, value: np.ndarray) -> None:
+        self.__smooth = value
+        # delete deprecated cached values
+        self.__x = None
+        self.__y0 = None
+        self.__y = None
+
     @property
     def measurement_operator(self) -> np.ndarray:
         return self.__measurement_operator
 
-    @property
-    def x(self) -> np.ndarray:
-        return self.__sparse.toarray() + self.__smooth
+    @measurement_operator.setter
+    def measurement_operator(self, value: np.ndarray) -> None:
+        self.__measurement_operator = value
+        # delete deprecated cached values
+        self.__y0 = None
+        self.__y = None
+        self.gaussian_noise()
 
     @property
     def H(self) -> np.ndarray:
         return self.measurement_operator
 
+    @H.setter
+    def H(self, value: np.ndarray) -> None:
+        self.measurement_operator = value
+
+    @property
+    def x(self) -> np.ndarray:
+        if self.__x is None:
+            self.__x = self.__sparse.toarray() + self.__smooth
+        return self.__x
+
     @property
     def y0(self) -> np.ndarray:
-        return self.H @ self.x.ravel()
+        if self.__y0 is None:
+            self.__y0 = self.H @ self.x.ravel()
+        return self.__y0
 
     @property
     def y(self) -> np.ndarray:
-        return self.y0 + self.__noise
+        if self.__y is None:
+            self.__y = self.y0 + self.__noise
+        return self.__y
 
     @property
     def noise(self) -> np.ndarray:
         return self.__noise
+
+    @noise.setter
+    def noise(self, value: np.ndarray) -> None:
+        self.__noise = value
+        # delete deprecated cached values
+        self.__y0 = None
 
     def random_sparse(self) -> None:
         """
@@ -153,7 +195,7 @@ class SparseSmoothSignal:
         """
         rand_matrix = 4 * sparse.rand(self.__dim[0], self.__dim[1], density=0.005)
         rand_matrix.data += 2
-        self.__sparse = rand_matrix
+        self.sparse = rand_matrix
 
     def random_smooth(self) -> None:
         """
@@ -180,9 +222,9 @@ class SparseSmoothSignal:
                                      operator_type='dask')
         alpha = np.ones(samples2.shape[0])
         m = MDMOp * alpha
-        self.__smooth = (m / np.max(m)).reshape(self.__dim[0], self.__dim[1])
+        self.smooth = (m / np.max(m)).reshape(self.__dim[0], self.__dim[1])
 
-    def random_measurement_operator(self, size: int) -> None:
+    def random_measurement_operator(self, size: int = None) -> None:
         """
         Creates a new random measurement operator with size random lines of the DFT matrix
 
@@ -191,19 +233,23 @@ class SparseSmoothSignal:
         size :
             Numbers of lines of the DFT matrix we want to pick, witch is also the new dimension of y
         """
-        assert self.__size >= size >= 0
-        self.__y_size = size
+        if size is None:
+            size = self.__y_size
+        else:
+            assert self.__size >= size >= 0
+            self.__y_size = size
         rand = np.random.choice(self.__size, size, replace=False)
+        # check if the operators is cached
         if self.__dim in self.__operators.keys():
             op = self.__operators[self.__dim]
         else:
             op = self.create_measurement_operator(self.__dim)
+            # cache the new operators and remove one if cache full
             if len(self.__operators) > 10:
                 self.__operators.popitem()
             else:
                 self.__operators[self.__dim] = op
-        self.__measurement_operator = op[rand]
-        self.gaussian_noise()
+        self.measurement_operator = op[rand]
 
     def gaussian_noise(self, psnr: np.float64 = None) -> None:
         """
@@ -227,31 +273,33 @@ class SparseSmoothSignal:
         mse = 10 ** (mse_db / 10)
 
         # mse is the variance of the noise and since it is a complex gaussian the variance is halved
-        self.__noise = np.random.normal(0, np.sqrt(mse / 2), (self.__y_size, 2)).view(np.complex128)
+        self.noise = np.random.normal(0, np.sqrt(mse / 2), (self.__y_size, 2)).view(np.complex128)
 
     def plot(self) -> None:
         """
         Plot all signals in 2d
         """
-        im = self.__ax1.imshow(self.x)
-        self.__ax1.set_title("X")
-        self.__ax1.axis('off')
-        self.__fig.colorbar(im, ax=self.__ax1)
+        fig, ax = plt.subplots()
+        fig.canvas.set_window_title('Spare + Smooth Signal')
+        fig.suptitle("X")
+        im = ax.imshow(self.x)
+        fig.colorbar(im, ax=ax)
+        ax.axis('off')
 
-        im = self.__ax2.imshow(self.smooth)
-        self.__ax2.set_title("Smooth")
-        self.__ax2.axis('off')
-        self.__fig.colorbar(im, ax=self.__ax2)
+        fig, ax = plt.subplots()
+        fig.canvas.set_window_title('Spare + Smooth Signal')
+        fig.suptitle("Smooth")
+        im = ax.imshow(self.smooth)
+        fig.colorbar(im, ax=ax)
+        ax.axis('off')
 
-        im = self.__ax3.imshow(self.sparse.toarray())
-        self.__ax3.set_title("Sparse")
-        self.__ax3.axis('off')
-        self.__fig.colorbar(im, ax=self.__ax3)
+        fig, ax = plt.subplots()
+        fig.canvas.set_window_title('Spare + Smooth Signal')
+        fig.suptitle("Spare")
+        im = ax.imshow(self.sparse)
+        fig.colorbar(im, ax=ax)
+        ax.axis('off')
 
-        im = self.__ax4.imshow(self.noise.reshape(self.__dim))
-        self.__ax4.set_title("Noise")
-        self.__ax4.axis('off')
-        self.__fig.colorbar(im, ax=self.__ax4)
 
     @classmethod
     def show(cls) -> None:
