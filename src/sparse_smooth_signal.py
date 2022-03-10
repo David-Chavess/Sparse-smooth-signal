@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Tuple
 
 import numpy as np
-from scipy import sparse
+from scipy import sparse as sp
 import matplotlib.pyplot as plt
 from pycsou.linop.sampling import MappedDistanceMatrix
 
@@ -31,7 +31,7 @@ class SparseSmoothSignal:
         matrix representing the linear sensing measurement operator used
     H : np.ndarray 
         alias for measurement_operator
-    psnr : np.float64
+    psnr : float
          peak signal-to-noise ratio of the gaussian white noise added
     noise :
         gaussian white noise added
@@ -48,7 +48,7 @@ class SparseSmoothSignal:
         Creates a new random smooth component
     random_measurement_operator(size: int) -> None
         Creates a new random measurement operator with size random lines of the DFT matrix
-    gaussian_noise(psnr: np.float64 = None) -> None:
+    gaussian_noise(psnr: float = None) -> None:
         Creates a new gaussian white noise
     plot() -> None
         Plot all signals in 2d
@@ -61,7 +61,7 @@ class SparseSmoothSignal:
     __operators = {}
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | np.ndarray = None, psnr: np.float64 = 50):
+                 measurement_operator: None | int | np.ndarray = None, psnr: float = 50.0) -> None:
         """
         Parameters
         ----------
@@ -73,7 +73,7 @@ class SparseSmoothSignal:
             matrix representing the smooth part of the signal
         measurement_operator : None | np.ndarray 
             matrix representing the linear sensing measurement operator used
-        psnr : np.float64
+        psnr : float
             peak signal-to-noise ratio of the gaussian white noise added
 
         For any optionnal argumant if not specified the corresponding value will be random 
@@ -107,7 +107,9 @@ class SparseSmoothSignal:
         else:
             self.random_smooth()
 
-        if measurement_operator is not None:
+        if type(measurement_operator) is int:
+            self.random_measurement_operator(measurement_operator)
+        elif measurement_operator is not None:
             assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
             self.__measurement_operator = measurement_operator
         else:
@@ -119,7 +121,7 @@ class SparseSmoothSignal:
 
     @property
     def sparse(self) -> np.ndarray:
-        return self.__sparse.toarray()
+        return self.__sparse
 
     @sparse.setter
     def sparse(self, value: np.ndarray) -> None:
@@ -164,7 +166,7 @@ class SparseSmoothSignal:
     @property
     def x(self) -> np.ndarray:
         if self.__x is None:
-            self.__x = self.__sparse.toarray() + self.__smooth
+            self.__x = self.__sparse + self.__smooth
         return self.__x
 
     @property
@@ -185,7 +187,7 @@ class SparseSmoothSignal:
 
     @noise.setter
     def noise(self, value: np.ndarray) -> None:
-        self.__noise = value
+        self.__noise = value.ravel()
         # delete deprecated cached values
         self.__y0 = None
 
@@ -193,9 +195,9 @@ class SparseSmoothSignal:
         """
         Creates a new random sparse component
         """
-        rand_matrix = 4 * sparse.rand(self.__dim[0], self.__dim[1], density=0.005)
+        rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005)
         rand_matrix.data += 2
-        self.sparse = rand_matrix
+        self.sparse = rand_matrix.toarray()
 
     def random_smooth(self) -> None:
         """
@@ -251,7 +253,7 @@ class SparseSmoothSignal:
                 self.__operators[self.__dim] = op
         self.measurement_operator = op[rand]
 
-    def gaussian_noise(self, psnr: np.float64 = None) -> None:
+    def gaussian_noise(self, psnr: float = None) -> None:
         """
         Creates a new gaussian white noise
 
