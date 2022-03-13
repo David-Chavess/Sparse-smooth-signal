@@ -27,13 +27,13 @@ class SparseSmoothSignal:
         matrix representing the smooth part of the signal
     x : np.ndarray
         signal x sum of sparse and smooth
-    measurement_operator : np.ndarray 
+    measurement_operator : np.ndarray
         matrix representing the linear sensing measurement operator used
-    H : np.ndarray 
+    H : np.ndarray
         alias for measurement_operator
     psnr : float
-         peak signal-to-noise ratio of the gaussian white noise added
-    noise :
+        peak signal-to-noise ratio of the gaussian white noise added
+    noise : np.ndarray
         gaussian white noise added
     yo : np.ndarray
         prefect output signal
@@ -47,21 +47,24 @@ class SparseSmoothSignal:
     random_smooth() -> None
         Creates a new random smooth component
     random_measurement_operator(size: int) -> None
-        Creates a new random measurement operator with size random lines of the DFT matrix
+        Creates a new random measurement operator with size random lines of the 2d DFT matrix
     gaussian_noise(psnr: float = None) -> None:
         Creates a new gaussian white noise
-    plot() -> None
+    plot(name: str =  "") -> None
         Plot all signals in 2d
     show() -> None
         Show the plotted signals, it is used after plot()
         needed if we want to plot multiple SparseSmoothSignal
+    create_measurement_operator(dim: Tuple[int, int]) -> np.ndarray
+        Create a 2d DFT matrix
+        Used by multiplying to the flatted image
     """
 
     # cache measurements operators
     __operators = {}
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | int | np.ndarray = None, psnr: float = 50.0) -> None:
+                 measurement_operator: None | int | np.ndarray = None, psnr: float = 10.0) -> None:
         """
         Parameters
         ----------
@@ -77,7 +80,7 @@ class SparseSmoothSignal:
             peak signal-to-noise ratio of the gaussian white noise added
 
         For any optionnal argumant if not specified the corresponding value will be random 
-        except variance which is 1 by default
+        except psnr which is 10 by default
         """
         assert dim[0] >= 0 and dim[1] >= 0, "Negative dimension is not valid"
 
@@ -107,7 +110,7 @@ class SparseSmoothSignal:
         else:
             self.random_smooth()
 
-        if type(measurement_operator) is int:
+        if isinstance(measurement_operator, int):
             self.random_measurement_operator(measurement_operator)
         elif measurement_operator is not None:
             assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
@@ -232,7 +235,7 @@ class SparseSmoothSignal:
 
         Parameters
         ----------
-        size :
+        size : int
             Numbers of lines of the DFT matrix we want to pick, witch is also the new dimension of y
         """
         if size is None:
@@ -259,7 +262,7 @@ class SparseSmoothSignal:
 
         Parameters
         ----------
-        psnr :
+        psnr : float
             peak signal-to-noise ratio of the gaussian white noise
             if None then we choose the last input
             if the psnr was never changed we take 10
@@ -277,30 +280,39 @@ class SparseSmoothSignal:
         # mse is the variance of the noise and since it is a complex gaussian the variance is halved
         self.noise = np.random.normal(0, np.sqrt(mse / 2), (self.__y_size, 2)).view(np.complex128)
 
-    def plot(self) -> None:
+    def plot(self, name: str = "") -> None:
         """
         Plot all signals in 2d
+
+        Parameters
+        ----------
+        name : str
+            name the plotted signal
+            useful when plotting multiple signals
         """
         fig, ax = plt.subplots()
         fig.canvas.set_window_title('Spare + Smooth Signal')
-        fig.suptitle("X")
+        fig.suptitle(name)
         im = ax.imshow(self.x)
         fig.colorbar(im, ax=ax)
         ax.axis('off')
+        ax.set_title("X")
 
         fig, ax = plt.subplots()
         fig.canvas.set_window_title('Spare + Smooth Signal')
-        fig.suptitle("Smooth")
+        fig.suptitle(name)
         im = ax.imshow(self.smooth)
         fig.colorbar(im, ax=ax)
         ax.axis('off')
+        ax.set_title("Smooth")
 
         fig, ax = plt.subplots()
         fig.canvas.set_window_title('Spare + Smooth Signal')
-        fig.suptitle("Spare")
+        fig.suptitle(name)
         im = ax.imshow(self.sparse)
         fig.colorbar(im, ax=ax)
         ax.axis('off')
+        ax.set_title("Spare")
 
 
     @classmethod
@@ -313,6 +325,20 @@ class SparseSmoothSignal:
 
     @staticmethod
     def create_measurement_operator(dim: Tuple[int, int]) -> np.ndarray:
+        """
+        Create a 2d DFT matrix
+        Used by multiplying to the flatted image
+
+        Parameters
+        ----------
+        dim : Tuple[int, int]
+            dimension of the image
+
+        Returns
+        -------
+        np.ndarray
+            a numpy array representing the 2d DFT matrix
+        """
         # we create 100 images of dimension dim
         base = np.zeros((dim[0] * dim[1], dim[0], dim[1]))
         # we create the indexing array to put ones at the right place to create the bases
