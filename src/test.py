@@ -1,3 +1,7 @@
+from pycsou.linop import FirstDerivative
+
+from src.lasso_solver import LassoSolver
+from src.tikhonov_solver import TikhonovSolver
 from src.sparse_smooth_signal import SparseSmoothSignal
 import numpy as np
 
@@ -49,6 +53,20 @@ if __name__ == '__main__':
     #print("Done")
 
     dim = (100, 100)
-    s = SparseSmoothSignal(dim)
-    s.plot()
+    s = SparseSmoothSignal(dim, measurement_operator=5000)
+
+    sol = TikhonovSolver(s.y, s.measurement_operator, 0.1)
+    x, _ = sol.solve()
+
+    s.plot("Base")
     s.show()
+    SparseSmoothSignal(dim, smooth=x.reshape(dim), sparse=np.zeros(dim), measurement_operator=s.H).plot()
+
+    D = FirstDerivative(10000)
+    D.compute_lipschitz_cst()
+    sol = LassoSolver(s.y, s.measurement_operator, 0.1, D)
+    x, _ = sol.solve()
+
+    SparseSmoothSignal(dim, smooth=np.zeros(dim), sparse=x.reshape(dim), measurement_operator=s.H).plot()
+    s.show()
+
