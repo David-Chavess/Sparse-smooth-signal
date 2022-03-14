@@ -12,8 +12,8 @@ class SparseSmoothSignal:
     """
     Base class for the sparse and smooth signal.
 
-    The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth
-    yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x
+    The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth,
+    yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x,
     y is the signal yo with some error represented by a gaussian white noise
 
     Attributes
@@ -60,11 +60,8 @@ class SparseSmoothSignal:
         Used by multiplying to the flatted image
     """
 
-    # cache measurements operators
-    __operators = {}
-
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | int | np.ndarray = None, psnr: float = 10.0) -> None:
+                 measurement_operator: None | int | np.ndarray = None, psnr: float = 50.0) -> None:
         """
         Parameters
         ----------
@@ -79,6 +76,8 @@ class SparseSmoothSignal:
         psnr : float
             peak signal-to-noise ratio of the gaussian white noise added
 
+        Notes
+        -----
         For any optionnal argumant if not specified the corresponding value will be random 
         except psnr which is 10 by default
         """
@@ -218,7 +217,7 @@ class SparseSmoothSignal:
         rng = np.random.default_rng()
         samples2 = np.stack((2 * rng.random(size=nb) - 1, 2 * rng.random(size=nb) - 1), axis=-1)
 
-        sigma = 1/5
+        sigma = 1 / 5
         # used to reduce computation time
         max_distance = 3 * sigma
         # gaussian
@@ -244,16 +243,9 @@ class SparseSmoothSignal:
             assert self.__size >= size >= 0
             self.__y_size = size
         rand = np.random.choice(self.__size, size, replace=False)
-        # check if the operators is cached
-        if self.__dim in self.__operators.keys():
-            op = self.__operators[self.__dim]
-        else:
-            op = self.create_measurement_operator(self.__dim)
-            # cache the new operators and remove one if cache full
-            if len(self.__operators) > 10:
-                self.__operators.popitem()
-            else:
-                self.__operators[self.__dim] = op
+
+        op = self.create_measurement_operator(self.__dim)
+
         self.measurement_operator = op[rand]
 
     def gaussian_noise(self, psnr: float = None) -> None:
@@ -313,7 +305,6 @@ class SparseSmoothSignal:
         fig.colorbar(im, ax=ax)
         ax.axis('off')
         ax.set_title("Spare")
-
 
     @classmethod
     def show(cls) -> None:
