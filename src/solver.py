@@ -22,4 +22,4 @@ class Solver(ABC):
 class MyOperator(DenseLinearOperator):
 
     def adjoint(self, y: Union[Number, np.ndarray, da.core.Array]) -> Union[Number, np.ndarray]:
-        return np.real(super().adjoint(y))
+        return super().adjoint(y).real
