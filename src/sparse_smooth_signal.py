@@ -338,7 +338,7 @@ class SparseSmoothSignal:
         index_y = np.kron(np.ones(dim[1], dtype=int), np.arange(0, dim[1]))
         base[index_img, index_x, index_y] = 1
         # compute fft2 over the two last dimension
-        dtf_2d = np.fft.fft2(base)
+        dtf_2d = np.fft.fft2(base, norm='ortho')
         # flatten the two last dimensions
         operator = dtf_2d.reshape(dim[0] * dim[1], dim[0] * dim[1])
         return operator
