@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+from pycsou.core import LinearOperator
 from pycsou.func import SquaredL2Loss, DiffFuncHStack, NullDifferentiableFunctional, NullProximableFunctional, \
     ProxFuncHStack, L1Norm, SquaredL2Norm
-from pycsou.linop import LinOpHStack
+from pycsou.linop import LinOpHStack, FirstDerivative
 from pycsou.opt import APGD
 
 from src.solver import Solver, MyOperator
@@ -11,11 +12,18 @@ from src.solver import Solver, MyOperator
 
 class SparseSmoothSolver(Solver):
 
-    def __init__(self, y: np.ndarray, operator: np.ndarray, lambda1: float, lambda2: float) -> None:
+    def __init__(self, y: np.ndarray, operator: np.ndarray, lambda1: float = 0.1, lambda2: float = 0.1,
+                 l2operator: None | str | np.ndarray | LinearOperator = None) -> None:
         super().__init__(y, operator)
 
         self.lambda1 = lambda1
         self.lambda2 = lambda2
+        if isinstance(l2operator, str):
+            if l2operator == "deriv1":
+                l2operator = FirstDerivative(operator.shape[1])
+                l2operator.compute_lipschitz_cst()
+
+        self.l2operator = l2operator
 
     def solve(self) -> (np.ndarray, np.ndarray):
 
@@ -29,6 +37,14 @@ class SparseSmoothSolver(Solver):
         F = l22_loss * stack
 
         L = self.lambda2 * SquaredL2Norm(H.shape[1])
+
+        if isinstance(self.l2operator, np.ndarray):
+            K = MyOperator(self.l2operator)
+            K.compute_lipschitz_cst()
+            L = L * K
+        elif isinstance(self.l2operator, LinearOperator):
+            L = L * self.l2operator
+
         F = F + DiffFuncHStack(NullDifferentiableFunctional(H.shape[1]), L)
 
         G = ProxFuncHStack(self.lambda2 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]))
