@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 from scipy import sparse as sp
@@ -282,29 +282,26 @@ class SparseSmoothSignal:
             name the plotted signal
             useful when plotting multiple signals
         """
-        fig, ax = plt.subplots()
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
         fig.canvas.set_window_title('Spare + Smooth Signal')
         fig.suptitle(name)
-        im = ax.imshow(self.x)
-        fig.colorbar(im, ax=ax)
-        ax.axis('off')
-        ax.set_title("X")
 
-        fig, ax = plt.subplots()
-        fig.canvas.set_window_title('Spare + Smooth Signal')
-        fig.suptitle(name)
-        im = ax.imshow(self.smooth)
-        fig.colorbar(im, ax=ax)
-        ax.axis('off')
-        ax.set_title("Smooth")
+        im = ax1.imshow(self.x)
+        fig.colorbar(im, ax=ax1, fraction=0.047, pad=0.01)
+        ax1.axis('off')
+        ax1.set_title("X")
 
-        fig, ax = plt.subplots()
-        fig.canvas.set_window_title('Spare + Smooth Signal')
-        fig.suptitle(name)
-        im = ax.imshow(self.sparse)
-        fig.colorbar(im, ax=ax)
-        ax.axis('off')
-        ax.set_title("Spare")
+        im = ax2.imshow(self.smooth)
+        fig.colorbar(im, ax=ax2, fraction=0.047, pad=0.01)
+        ax2.axis('off')
+        ax2.set_title("Smooth")
+
+        im = ax3.imshow(self.sparse)
+        fig.colorbar(im, ax=ax3, fraction=0.047, pad=0.01)
+        ax3.axis('off')
+        ax3.set_title("Spare")
+
+        fig.tight_layout()
 
     @classmethod
     def show(cls) -> None:
