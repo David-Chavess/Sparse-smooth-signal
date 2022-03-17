@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import numpy as np
+from pycsou.core import LinearOperator
 from pycsou.func import SquaredL2Loss, QuadraticForm, DiffFuncHStack, NullDifferentiableFunctional
 from pycsou.linop import DenseLinearOperator, IdentityOperator, LinOpHStack
 from pycsou.opt import APGD
 
-from src.solver import Solver, MyOperator
+from src.solver import Solver
 
 
 class TikhonovSolver(Solver):
 
-    def __init__(self, y: np.ndarray, operator: np.ndarray, tikhonov_matrix: None | float | np.ndarray,
+    def __init__(self, y: np.ndarray, operator: LinearOperator, tikhonov_matrix: None | float | np.ndarray,
                  generalized: bool = False) -> None:
         super().__init__(y, operator)
 
@@ -19,7 +20,7 @@ class TikhonovSolver(Solver):
 
     def solve(self) -> (np.ndarray, np.ndarray):
 
-        H = MyOperator(self.operator)
+        H = self.operator
         H.compute_lipschitz_cst()
 
         stack = LinOpHStack(H, H, n_jobs=-1)

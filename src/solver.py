@@ -4,12 +4,13 @@ from typing import Union
 
 import numpy as np
 from dask import array as da
+from pycsou.core import LinearOperator
 from pycsou.linop import DenseLinearOperator
 
 
 class Solver(ABC):
 
-    def __init__(self, y: np.ndarray, operator: np.ndarray) -> None:
+    def __init__(self, y: np.ndarray, operator: LinearOperator) -> None:
         super().__init__()
         self.y = y
         self.operator = operator

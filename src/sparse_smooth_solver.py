@@ -12,7 +12,7 @@ from src.solver import Solver, MyOperator
 
 class SparseSmoothSolver(Solver):
 
-    def __init__(self, y: np.ndarray, operator: np.ndarray, lambda1: float = 0.1, lambda2: float = 0.1,
+    def __init__(self, y: np.ndarray, operator: LinearOperator, lambda1: float = 0.1, lambda2: float = 0.1,
                  l2operator: None | str | np.ndarray | LinearOperator = None) -> None:
         super().__init__(y, operator)
 
@@ -27,7 +27,7 @@ class SparseSmoothSolver(Solver):
 
     def solve(self) -> (np.ndarray, np.ndarray):
 
-        H = MyOperator(self.operator)
+        H = self.operator
         H.compute_lipschitz_cst()
 
         stack = LinOpHStack(H, H, n_jobs=-1)

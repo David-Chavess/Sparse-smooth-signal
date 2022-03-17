@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Tuple, Any
+from typing import Tuple
 
-import numpy as np
-from scipy import sparse as sp
 import matplotlib.pyplot as plt
+import numpy as np
+from pycsou.core import LinearOperator
 from pycsou.linop.sampling import MappedDistanceMatrix
+from scipy import sparse as sp
+
+from src.solver import MyOperator
 
 
 class SparseSmoothSignal:
@@ -61,7 +64,7 @@ class SparseSmoothSignal:
     """
 
     def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | int | np.ndarray = None, psnr: float = 50.0) -> None:
+                 measurement_operator: None | int | np.ndarray | LinearOperator = None, psnr: float = 50.0) -> None:
         """
         Parameters
         ----------
@@ -86,8 +89,6 @@ class SparseSmoothSignal:
         self.__dim = dim
         # length of the signal x
         self.__size = dim[0] * dim[1]
-        # length of the output signal y
-        self.__y_size = self.__size
 
         self.__psnr = psnr
 
@@ -109,13 +110,20 @@ class SparseSmoothSignal:
         else:
             self.random_smooth()
 
-        if isinstance(measurement_operator, int):
-            self.random_measurement_operator(measurement_operator)
-        elif measurement_operator is not None:
+        self.__operator_random = None
+
+        if isinstance(measurement_operator, LinearOperator):
+            self.__measurement_operator = measurement_operator
+        elif isinstance(measurement_operator, np.ndarray):
             assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
             self.__measurement_operator = measurement_operator
         else:
-            self.random_measurement_operator()
+            self.__measurement_operator = self.create_measurement_operator(self.__dim)
+
+            if isinstance(measurement_operator, int):
+                self.random_measurement_operator(measurement_operator)
+            else:
+                self.random_measurement_operator()
 
     @property
     def dim(self) -> Tuple[int, int]:
@@ -146,11 +154,13 @@ class SparseSmoothSignal:
         self.__y = None
 
     @property
-    def measurement_operator(self) -> np.ndarray:
-        return self.__measurement_operator
+    def measurement_operator(self) -> LinearOperator:
+        if isinstance(self.__measurement_operator, LinearOperator):
+            return self.__measurement_operator
+        return MyOperator(self.__measurement_operator[self.__operator_random])
 
     @measurement_operator.setter
-    def measurement_operator(self, value: np.ndarray) -> None:
+    def measurement_operator(self, value: np.ndarray | LinearOperator) -> None:
         self.__measurement_operator = value
         # delete deprecated cached values
         self.__y0 = None
@@ -158,7 +168,19 @@ class SparseSmoothSignal:
         self.gaussian_noise()
 
     @property
-    def H(self) -> np.ndarray:
+    def operator_random(self) -> np.ndarray:
+        return self.__operator_random
+
+    @measurement_operator.setter
+    def operator_random(self, value: np.ndarray) -> None:
+        self.__operator_random = value
+        # delete deprecated cached values
+        self.__y0 = None
+        self.__y = None
+        self.gaussian_noise()
+
+    @property
+    def H(self) -> LinearOperator:
         return self.measurement_operator
 
     @H.setter
@@ -174,17 +196,19 @@ class SparseSmoothSignal:
     @property
     def y0(self) -> np.ndarray:
         if self.__y0 is None:
-            self.__y0 = self.H @ self.x.ravel()
+            self.__y0 = self.H(self.x.ravel())
         return self.__y0
 
     @property
     def y(self) -> np.ndarray:
         if self.__y is None:
-            self.__y = self.y0 + self.__noise
+            self.__y = self.y0 + self.noise
         return self.__y
 
     @property
     def noise(self) -> np.ndarray:
+        if self.__noise is None:
+            self.gaussian_noise()
         return self.__noise
 
     @noise.setter
@@ -235,18 +259,12 @@ class SparseSmoothSignal:
         Parameters
         ----------
         size : int
-            Numbers of lines of the DFT matrix we want to pick, witch is also the new dimension of y
+            Numbers of lines of the DFT matrix we want to pick, which is also the new dimension of y
         """
         if size is None:
-            size = self.__y_size
-        else:
-            assert self.__size >= size >= 0
-            self.__y_size = size
-        rand = np.random.choice(self.__size, size, replace=False)
-
-        op = self.create_measurement_operator(self.__dim)
-
-        self.measurement_operator = op[rand]
+            size = self.__size
+        rand = np.random.choice(size, size, replace=False)
+        self.operator_random = rand
 
     def gaussian_noise(self, psnr: float = None) -> None:
         """
@@ -270,7 +288,7 @@ class SparseSmoothSignal:
         mse = 10 ** (mse_db / 10)
 
         # mse is the variance of the noise and since it is a complex gaussian the variance is halved
-        self.noise = np.random.normal(0, np.sqrt(mse / 2), (self.__y_size, 2)).view(np.complex128)
+        self.noise = np.random.normal(0, np.sqrt(mse / 2), (self.H.shape[0], 2)).view(np.complex128)
 
     def plot(self, name: str = "") -> None:
         """
