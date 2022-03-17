@@ -47,7 +47,7 @@ class SparseSmoothSolver(Solver):
 
         F = F + DiffFuncHStack(NullDifferentiableFunctional(H.shape[1]), L)
 
-        G = ProxFuncHStack(self.lambda2 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]))
+        G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]))
 
         pds = APGD(2 * self.operator.shape[1], F=F, G=G, verbose=None)
         estimate, converged, diagnostics = pds.iterate()
