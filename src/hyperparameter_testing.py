@@ -7,6 +7,7 @@ import numpy as np
 dim = (32, 32)
 size = dim[0] * dim[1]
 
+
 def test_H():
     s = SparseSmoothSignal(dim)
     s.plot("Base")
@@ -42,6 +43,7 @@ def test_H():
 
     s.show()
 
+
 def test_lambda1():
     s = SparseSmoothSignal(dim, measurement_operator=int(0.25 * size))
     s.plot("Base")
@@ -67,6 +69,7 @@ def test_lambda1():
     SparseSmoothSignal(dim, x1.reshape(dim), x2.reshape(dim), s.H).plot("Sparse + Smooth : [10, 0.1, D, 25%]")
 
     s.show()
+
 
 def test_lambda2():
     s = SparseSmoothSignal(dim, measurement_operator=int(0.25 * size))

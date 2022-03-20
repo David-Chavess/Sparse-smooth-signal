@@ -1,10 +1,11 @@
-from pycsou.linop import FirstDerivative
+import numpy as np
+import timeit
 
 from src.lasso_solver import LassoSolver
+from src.solver import MyMatrixFreeOperator
+from src.sparse_smooth_signal import SparseSmoothSignal
 from src.sparse_smooth_solver import SparseSmoothSolver
 from src.tikhonov_solver import TikhonovSolver
-from src.sparse_smooth_signal import SparseSmoothSignal
-import numpy as np
 
 
 class Test:
@@ -47,21 +48,48 @@ class Test:
         assert not np.allclose(s.x, x)
         assert not np.allclose(s.y, y)
 
+    def test_MyMatrixFreeOperator(self) -> None:
+        operator = SparseSmoothSignal.create_measurement_operator(self.dim)
+        free_op = MyMatrixFreeOperator(self.dim)
+        vec = np.random.randint(1000, size=self.dim)
+        assert np.allclose((operator @ vec.ravel()), free_op(vec.ravel()))
+
+        s = SparseSmoothSignal(self.dim, measurement_operator=self.dim[0])
+        free_op = MyMatrixFreeOperator(self.dim, s.operator_random)
+        vec = np.random.randint(1000, size=self.dim)
+        assert np.allclose((operator @ vec.ravel()), free_op(vec.ravel()))
 
 if __name__ == '__main__':
     # test = Test()
     # test.test_operator()
     # test.test_noise()
     # test.test_cache()
+    # test.test_MyMatrixFreeOperator()
     # print("Test Done")
 
-    dim = (128, 128)
-    s = SparseSmoothSignal(dim, measurement_operator=64*64)
+    dim = (64, 64)
 
-    sol = SparseSmoothSolver(s.y, s.measurement_operator, 0.1, 1)
-    x1, x2 = sol.solve()
+    s1 = SparseSmoothSignal(dim)
+    s1.plot("Base")
 
-    s.plot("Base")
-    SparseSmoothSignal(dim, x1.reshape(dim), x2.reshape(dim), s.H).plot("Sparse + Smooth")
-    s.show()
+    t1 = timeit.timeit()
+    solver = SparseSmoothSolver(s1.y, s1.H, 0.1, 0.1, "deriv1")
+    x1, x2 = solver.solve()
+    t2 = timeit.timeit()
+    s2 = SparseSmoothSignal(dim, sparse=x1.reshape(dim), smooth=x2.reshape(dim), measurement_operator=s1.H)
+    s2.plot("op1")
+
+    op = MyMatrixFreeOperator(dim)
+    s1.measurement_operator = op
+
+    t3 = timeit.timeit()
+    solver = SparseSmoothSolver(s1.y, s1.H, 0.1, 0.1, "deriv1")
+    x1, x2 = solver.solve()
+    t4 = timeit.timeit()
+    s2 = SparseSmoothSignal(dim, sparse=x1.reshape(dim), smooth=x2.reshape(dim), measurement_operator=s1.H)
+    s2.plot("op2")
+
+    print(t2-t1)
+    print(t4-t3)
+    s2.show()
 

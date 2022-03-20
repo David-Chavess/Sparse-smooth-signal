@@ -31,7 +31,6 @@ class SparseSmoothSolver(Solver):
         H.compute_lipschitz_cst()
 
         stack = LinOpHStack(H, H, n_jobs=-1)
-        stack.compute_lipschitz_cst()
 
         l22_loss = (1 / 2) * SquaredL2Loss(H.shape[0], self.y)
         F = l22_loss * stack
@@ -45,11 +44,11 @@ class SparseSmoothSolver(Solver):
         elif isinstance(self.l2operator, LinearOperator):
             L = L * self.l2operator
 
-        F = F + DiffFuncHStack(NullDifferentiableFunctional(H.shape[1]), L)
+        F = F + DiffFuncHStack(NullDifferentiableFunctional(H.shape[1]), L, n_jobs=-1)
 
-        G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]))
+        G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]), n_jobs=-1)
 
-        pds = APGD(2 * self.operator.shape[1], F=F, G=G, verbose=None)
+        pds = APGD(2 * self.operator.shape[1], F=F, G=G, verbose=1)
         estimate, converged, diagnostics = pds.iterate()
         x = estimate['iterand']
         x1 = x[:self.operator.shape[1]]

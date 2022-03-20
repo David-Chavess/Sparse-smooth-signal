@@ -99,13 +99,13 @@ class SparseSmoothSignal:
         self.__noise = None
 
         if sparse is not None:
-            assert sparse.shape == dim, "Sparse is not the same shape as dim"
+            assert sparse.shape == dim, "Sparse is not the same dim as dim"
             self.__sparse = sparse
         else:
             self.random_sparse()
 
         if smooth is not None:
-            assert smooth.shape == dim, "Smooth is not the same size as dim"
+            assert smooth.shape == dim, "Smooth is not the same lines as dim"
             self.__smooth = smooth
         else:
             self.random_smooth()
@@ -115,7 +115,7 @@ class SparseSmoothSignal:
         if isinstance(measurement_operator, LinearOperator):
             self.__measurement_operator = measurement_operator
         elif isinstance(measurement_operator, np.ndarray):
-            assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
+            assert measurement_operator.shape[1] == self.__size, "Measurement operator dim does not match dim"
             self.__measurement_operator = measurement_operator
         else:
             self.__measurement_operator = self.create_measurement_operator(self.__dim)
@@ -155,17 +155,21 @@ class SparseSmoothSignal:
 
     @property
     def measurement_operator(self) -> LinearOperator:
-        if isinstance(self.__measurement_operator, LinearOperator):
-            return self.__measurement_operator
+        if self.__operator_random is None:
+            if isinstance(self.__measurement_operator, LinearOperator):
+                return self.__measurement_operator
+            else:
+                return MyOperator(self.__measurement_operator)
         return MyOperator(self.__measurement_operator[self.__operator_random])
 
     @measurement_operator.setter
     def measurement_operator(self, value: np.ndarray | LinearOperator) -> None:
         self.__measurement_operator = value
+        self.__operator_random = None
         # delete deprecated cached values
         self.__y0 = None
         self.__y = None
-        self.gaussian_noise()
+        self.__noise = None
 
     @property
     def operator_random(self) -> np.ndarray:
@@ -177,7 +181,7 @@ class SparseSmoothSignal:
         # delete deprecated cached values
         self.__y0 = None
         self.__y = None
-        self.gaussian_noise()
+        self.__noise = None
 
     @property
     def H(self) -> LinearOperator:
@@ -215,7 +219,7 @@ class SparseSmoothSignal:
     def noise(self, value: np.ndarray) -> None:
         self.__noise = value.ravel()
         # delete deprecated cached values
-        self.__y0 = None
+        self.__y = None
 
     def random_sparse(self) -> None:
         """
@@ -263,8 +267,9 @@ class SparseSmoothSignal:
         """
         if size is None:
             size = self.__size
-        rand = np.random.choice(size, size, replace=False)
-        self.operator_random = rand
+
+        rand = np.random.choice(self.__size, size, replace=False)
+        self.__operator_random = rand
 
     def gaussian_noise(self, psnr: float = None) -> None:
         """
