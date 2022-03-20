@@ -7,7 +7,7 @@ from typing import Union, Tuple
 import numpy as np
 from dask import array as da
 from pycsou.core import LinearOperator
-from pycsou.linop import DenseLinearOperator, PyLopLinearOperator
+from pycsou.linop import DenseLinearOperator
 
 
 class Solver(ABC):

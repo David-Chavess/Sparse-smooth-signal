@@ -99,13 +99,13 @@ class SparseSmoothSignal:
         self.__noise = None
 
         if sparse is not None:
-            assert sparse.shape == dim, "Sparse is not the same dim as dim"
+            assert sparse.shape == dim, "Sparse is not the same shape as dim"
             self.__sparse = sparse
         else:
             self.random_sparse()
 
         if smooth is not None:
-            assert smooth.shape == dim, "Smooth is not the same lines as dim"
+            assert smooth.shape == dim, "Smooth is not the same shape as dim"
             self.__smooth = smooth
         else:
             self.random_smooth()
@@ -115,7 +115,7 @@ class SparseSmoothSignal:
         if isinstance(measurement_operator, LinearOperator):
             self.__measurement_operator = measurement_operator
         elif isinstance(measurement_operator, np.ndarray):
-            assert measurement_operator.shape[1] == self.__size, "Measurement operator dim does not match dim"
+            assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
             self.__measurement_operator = measurement_operator
         else:
             self.__measurement_operator = self.create_measurement_operator(self.__dim)
