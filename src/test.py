@@ -1,11 +1,10 @@
-import numpy as np
 import timeit
 
-from src.lasso_solver import LassoSolver
+import numpy as np
+
 from src.solver import MyMatrixFreeOperator
 from src.sparse_smooth_signal import SparseSmoothSignal
 from src.sparse_smooth_solver import SparseSmoothSolver
-from src.tikhonov_solver import TikhonovSolver
 
 
 class Test:
@@ -59,13 +58,14 @@ class Test:
         vec = np.random.randint(1000, size=self.dim)
         assert np.allclose((operator @ vec.ravel()), free_op(vec.ravel()))
 
+
 if __name__ == '__main__':
-    # test = Test()
-    # test.test_operator()
-    # test.test_noise()
-    # test.test_cache()
-    # test.test_MyMatrixFreeOperator()
-    # print("Test Done")
+    test = Test()
+    test.test_operator()
+    test.test_noise()
+    test.test_cache()
+    test.test_MyMatrixFreeOperator()
+    print("Test Done")
 
     dim = (512, 512)
 
