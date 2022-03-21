@@ -269,7 +269,7 @@ class SparseSmoothSignal:
             size = self.__size
 
         rand = np.random.choice(self.__size, size, replace=False)
-        self.__operator_random = rand
+        self.operator_random = rand
 
     def gaussian_noise(self, psnr: float = None) -> None:
         """

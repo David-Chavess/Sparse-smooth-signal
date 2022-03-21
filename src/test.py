@@ -67,7 +67,12 @@ if __name__ == '__main__':
     # test.test_MyMatrixFreeOperator()
     # print("Test Done")
 
-    dim = (64, 64)
+    dim = (512, 512)
+
+    op = MyMatrixFreeOperator(dim)
+    s = SparseSmoothSignal(dim, measurement_operator=op)
+    s.plot()
+    s.show()
 
     s1 = SparseSmoothSignal(dim)
     s1.plot("Base")
