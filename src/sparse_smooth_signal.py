@@ -234,7 +234,7 @@ class SparseSmoothSignal:
         Creates a new random smooth component
         """
         # number of gaussian we create
-        nb = int(0.005 * self.__size)
+        nb = 100
 
         # grid
         x = np.linspace(-1, 1, self.__dim[0])
@@ -306,7 +306,7 @@ class SparseSmoothSignal:
             useful when plotting multiple signals
         """
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
-        fig.canvas.set_window_title('Spare + Smooth Signal')
+        fig.canvas.set_window_title(f'Spare + Smooth Signal : {name}')
         fig.suptitle(name)
 
         im = ax1.imshow(self.x)

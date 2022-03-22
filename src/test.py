@@ -60,18 +60,25 @@ class Test:
 
 
 if __name__ == '__main__':
-    test = Test()
-    test.test_operator()
-    test.test_noise()
-    test.test_cache()
-    test.test_MyMatrixFreeOperator()
-    print("Test Done")
+    # test = Test()
+    # test.test_operator()
+    # test.test_noise()
+    # test.test_cache()
+    # test.test_MyMatrixFreeOperator()
+    # print("Test Done")
 
-    dim = (512, 512)
+    dim = (1024, 1024)
+    x = 125
 
     op = MyMatrixFreeOperator(dim)
     s = SparseSmoothSignal(dim, measurement_operator=op)
-    s.plot()
+    s.plot(f"1024x1024, {x}")
+
+    dim = (256, 256)
+
+    op = MyMatrixFreeOperator(dim)
+    s = SparseSmoothSignal(dim, measurement_operator=op)
+    s.plot(f"256x256, {x}")
     s.show()
 
     s1 = SparseSmoothSignal(dim)
