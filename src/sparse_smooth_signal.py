@@ -175,7 +175,7 @@ class SparseSmoothSignal:
     def operator_random(self) -> np.ndarray:
         return self.__operator_random
 
-    @measurement_operator.setter
+    @operator_random.setter
     def operator_random(self, value: np.ndarray) -> None:
         self.__operator_random = value
         # delete deprecated cached values
@@ -268,7 +268,7 @@ class SparseSmoothSignal:
         if size is None:
             size = self.__size
 
-        rand = np.random.choice(self.__size, size, replace=False)
+        rand = np.sort(np.random.choice(self.__size, size, replace=False))
         self.operator_random = rand
 
     def gaussian_noise(self, psnr: float = None) -> None:
