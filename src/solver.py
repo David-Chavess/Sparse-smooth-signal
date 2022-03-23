@@ -42,8 +42,8 @@ class MyMatrixFreeOperator(LinearOperator):
         elif isinstance(lines, np.ndarray):
             shape = (lines.size, size)
             self.rand_lines = lines
-        super().__init__(shape, dtype=None, is_explicit=False, is_dense=False, is_sparse=False, is_dask=False,
-                         is_symmetric=False, lipschitz_cst=1)
+        super().__init__(shape, is_explicit=False, is_dense=False, is_sparse=False, is_dask=False,
+                         is_symmetric=False, lipschitz_cst=1.)
 
     def __call__(self, arg: Number | np.ndarray) -> Number | np.ndarray:
         y = np.fft.fft2(arg.reshape(self.dim), norm='ortho').ravel()
@@ -64,5 +64,3 @@ class MyMatrixFreeOperator(LinearOperator):
         x = np.fft.ifft2(y_big.reshape(self.dim), norm='ortho')
         return x.ravel().real
 
-    def compute_lipschitz_cst(self, **kwargs):
-        return self.lipschitz_cst
