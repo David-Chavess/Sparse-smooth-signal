@@ -48,8 +48,7 @@ def test(s: SparseSmoothSignal, H: List[float], lambda1: List[float], lambda2: L
     loss_x1 = {}
     loss_x2 = {}
     for h in H:
-        s.random_measurement_operator(int(h * size))
-        op = MyMatrixFreeOperator(s.dim, s.random_lines)
+        op = MyMatrixFreeOperator(s.dim, int(h * size))
         s.H = op
         for p in psnr:
             s.gaussian_noise(p)
@@ -81,8 +80,8 @@ def test(s: SparseSmoothSignal, H: List[float], lambda1: List[float], lambda2: L
 
 
 if __name__ == '__main__':
-    dim = (32, 32)
-    op = MyMatrixFreeOperator(dim)
+    dim = (64, 64)
+    op = MyMatrixFreeOperator(dim, int(0.2*64*64))
     s1 = SparseSmoothSignal(dim, measurement_operator=op)
     test_solvers(s1, (0.1, 0.1), (0.1, 0.1))
-    # test(s1, [0.25, 0.5], [0.1], [0.1], [None, "deriv1"], [20.0, 50.0])
+    #test(s1, [0.25, 0.5], [0.1], [0.1], [None, "deriv1"], [20.0, 50.0])
