@@ -48,15 +48,19 @@ class Test:
         assert not np.allclose(s.y, y)
 
     def test_MyMatrixFreeOperator(self) -> None:
-        operator = SparseSmoothSignal.create_measurement_operator(self.dim)
-        free_op = MyMatrixFreeOperator(self.dim)
-        vec = np.random.randint(1000, size=self.dim)
-        assert np.allclose((operator @ vec.ravel()), free_op(vec.ravel()))
+        s = SparseSmoothSignal(self.dim)
+        x = np.random.randint(1000, size=self.dim).ravel()
+        y = np.random.randint(1000, size=self.dim).ravel()
 
-        s = SparseSmoothSignal(self.dim, measurement_operator=self.dim[0])
-        free_op = MyMatrixFreeOperator(self.dim, s.operator_random)
-        vec = np.random.randint(1000, size=self.dim)
-        assert np.allclose((operator @ vec.ravel()), free_op(vec.ravel()))
+        free_op = MyMatrixFreeOperator(self.dim)
+        assert np.allclose((s.H @ x), free_op(x))
+        assert np.allclose((s.H.adjoint(y)), free_op.adjoint(y))
+
+        s.random_measurement_operator(self.dim[0])
+        free_op = MyMatrixFreeOperator(self.dim, s.random_lines)
+        assert np.allclose((s.H @ x), free_op(x))
+        y = y[s.random_lines]
+        assert np.allclose((s.H.adjoint(y)), free_op.adjoint(y))
 
 
 if __name__ == '__main__':
