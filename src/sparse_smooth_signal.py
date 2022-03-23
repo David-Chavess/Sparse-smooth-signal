@@ -63,8 +63,11 @@ class SparseSmoothSignal:
         Used by multiplying to the flatted image
     """
 
-    def __init__(self, dim: Tuple[int, int], sparse: None | np.ndarray = None, smooth: None | np.ndarray = None,
-                 measurement_operator: None | int | np.ndarray | LinearOperator = None, psnr: float = 50.0) -> None:
+    def __init__(self, dim: Tuple[int, int],
+                 sparse: None | np.ndarray = None,
+                 smooth: None | np.ndarray = None,
+                 measurement_operator: None | int | np.ndarray | LinearOperator = None,
+                 psnr: float = 50.0) -> None:
         """
         Parameters
         ----------
@@ -110,7 +113,7 @@ class SparseSmoothSignal:
         else:
             self.random_smooth()
 
-        self.__operator_random = None
+        self.__random_lines = None
 
         if isinstance(measurement_operator, LinearOperator):
             self.__measurement_operator = measurement_operator
@@ -155,29 +158,29 @@ class SparseSmoothSignal:
 
     @property
     def measurement_operator(self) -> LinearOperator:
-        if self.__operator_random is None:
+        if self.__random_lines is None:
             if isinstance(self.__measurement_operator, LinearOperator):
                 return self.__measurement_operator
             else:
                 return MyOperator(self.__measurement_operator)
-        return MyOperator(self.__measurement_operator[self.__operator_random])
+        return MyOperator(self.__measurement_operator[self.__random_lines])
 
     @measurement_operator.setter
     def measurement_operator(self, value: np.ndarray | LinearOperator) -> None:
         self.__measurement_operator = value
-        self.__operator_random = None
+        self.__random_lines = None
         # delete deprecated cached values
         self.__y0 = None
         self.__y = None
         self.__noise = None
 
     @property
-    def operator_random(self) -> np.ndarray:
-        return self.__operator_random
+    def random_lines(self) -> np.ndarray:
+        return self.__random_lines
 
-    @operator_random.setter
-    def operator_random(self, value: np.ndarray) -> None:
-        self.__operator_random = value
+    @random_lines.setter
+    def random_lines(self, value: np.ndarray) -> None:
+        self.__random_lines = value
         # delete deprecated cached values
         self.__y0 = None
         self.__y = None
@@ -269,7 +272,7 @@ class SparseSmoothSignal:
             size = self.__size
 
         rand = np.sort(np.random.choice(self.__size, size, replace=False))
-        self.operator_random = rand
+        self.random_lines = rand
 
     def gaussian_noise(self, psnr: float = None) -> None:
         """

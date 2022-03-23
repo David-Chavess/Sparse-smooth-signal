@@ -55,7 +55,7 @@ class MyMatrixFreeOperator(LinearOperator):
     def adjoint(self, y: Number | np.ndarray) -> Number | np.ndarray:
 
         if self.rand_lines is not None:
-            y_big = np.zeros(self.dim).ravel()
+            y_big = np.zeros(self.dim, dtype=np.complex128).ravel()
             y_big[self.rand_lines] = y
         else:
             y_big = y
