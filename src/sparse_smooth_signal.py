@@ -16,7 +16,7 @@ class SparseSmoothSignal:
     Base class for the sparse and smooth signal.
 
     The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth,
-    yo is the prefect signal obtained through a linear measurement operator L of the signal such that y0 = L @ x,
+    yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x,
     y is the signal yo with some error represented by a gaussian white noise
 
     Attributes
@@ -32,7 +32,7 @@ class SparseSmoothSignal:
         signal x sum of sparse and smooth
     measurement_operator : np.ndarray
         matrix representing the linear sensing measurement operator used
-    L : np.ndarray
+    H : np.ndarray
         alias for measurement_operator
     psnr : float
         peak signal-to-noise ratio of the gaussian white noise added
