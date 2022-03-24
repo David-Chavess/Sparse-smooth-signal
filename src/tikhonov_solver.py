@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 from pycsou.core import LinearOperator
 from pycsou.func import SquaredL2Loss, SquaredL2Norm
-from pycsou.linop import IdentityOperator
 from pycsou.opt import APGD
 
 from src.solver import Solver
@@ -11,9 +10,10 @@ from src.solver import Solver
 
 class TikhonovSolver(Solver):
 
-    def __init__(self, y: np.ndarray, operator: LinearOperator, tikhonov_matrix: None | float | LinearOperator) -> None:
+    def __init__(self, y: np.ndarray, operator: LinearOperator, lambda_: float, l2_op: None | LinearOperator) -> None:
         super().__init__(y, operator)
-        self.tikhonov_matrix = tikhonov_matrix
+        self.l2_op = l2_op
+        self.lambda_ = lambda_
 
     def solve(self) -> (np.ndarray, np.ndarray):
 
@@ -23,12 +23,12 @@ class TikhonovSolver(Solver):
         l22_loss = (1 / 2) * SquaredL2Loss(H.shape[0], self.y)
         F = l22_loss * H
 
-        if self.tikhonov_matrix is not None:
-            if type(self.tikhonov_matrix) is float:
-                L = SquaredL2Norm(H.shape[1]) * (self.tikhonov_matrix * IdentityOperator(H.shape[1]))
-            else:
-                L = SquaredL2Norm(H.shape[1]) * self.tikhonov_matrix
-            F = F + L
+        L = self.lambda_ * SquaredL2Norm(H.shape[1])
+
+        if self.l2_op is not None:
+            L = SquaredL2Norm(H.shape[1]) * self.l2_op
+
+        F = F + L
 
         pds = APGD(self.operator.shape[1], F=F, verbose=None)
         estimate, converged, diagnostics = pds.iterate()

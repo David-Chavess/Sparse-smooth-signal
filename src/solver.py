@@ -42,7 +42,7 @@ class MyMatrixFreeOperator(LinearOperator):
         elif isinstance(lines, np.ndarray):
             shape = (lines.size, size)
             self.rand_lines = lines
-        super().__init__(shape, is_explicit=False, is_dense=False, is_sparse=False, is_dask=False,
+        super().__init__(shape, dtype=None, is_explicit=False, is_dense=False, is_sparse=False, is_dask=False,
                          is_symmetric=False, lipschitz_cst=1.)
 
     def __call__(self, arg: Number | np.ndarray) -> Number | np.ndarray:

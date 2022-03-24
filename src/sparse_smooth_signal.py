@@ -114,19 +114,18 @@ class SparseSmoothSignal:
             self.random_smooth()
 
         self.__random_lines = None
+        self.__measurement_operator = None
 
-        if isinstance(measurement_operator, LinearOperator):
-            self.__measurement_operator = measurement_operator
-        elif isinstance(measurement_operator, np.ndarray):
-            assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
-            self.__measurement_operator = measurement_operator
-        else:
-            self.__measurement_operator = self.create_measurement_operator(self.__dim)
-
-            if isinstance(measurement_operator, int):
-                self.random_measurement_operator(measurement_operator)
+        if measurement_operator is not None:
+            if isinstance(measurement_operator, LinearOperator):
+                self.__measurement_operator = measurement_operator
+            elif isinstance(measurement_operator, np.ndarray):
+                assert measurement_operator.shape[1] == self.__size, "Measurement operator shape does not match dim"
+                self.__measurement_operator = measurement_operator
             else:
-                self.random_measurement_operator()
+                self.__measurement_operator = self.create_measurement_operator(self.__dim)
+                self.random_measurement_operator(measurement_operator)
+
 
     @property
     def dim(self) -> Tuple[int, int]:
@@ -259,7 +258,7 @@ class SparseSmoothSignal:
         m = MDMOp * alpha
         self.smooth = (m / np.max(m)).reshape(self.__dim[0], self.__dim[1])
 
-    def random_measurement_operator(self, size: int = None) -> None:
+    def random_measurement_operator(self, size: int = -1) -> None:
         """
         Creates a new random measurement operator with size random lines of the DFT matrix
 
@@ -267,8 +266,9 @@ class SparseSmoothSignal:
         ----------
         size : int
             Numbers of lines of the DFT matrix we want to pick, which is also the new dimension of y
+            if -1 then we take all lines
         """
-        if size is None:
+        if size == -1:
             size = self.__size
 
         rand = np.sort(np.random.choice(self.__size, size, replace=False))
