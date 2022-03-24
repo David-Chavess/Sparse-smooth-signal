@@ -18,15 +18,15 @@ class Test:
         assert np.allclose((operator @ vec.ravel()).reshape(self.dim), np.fft.fft2(vec, norm='ortho'))
 
     def test_noise(self) -> None:
-        s = SparseSmoothSignal(self.dim, psnr=80)
+        s = SparseSmoothSignal(self.dim, measurement_operator=-1, psnr=80)
         psnr = 20 * np.log10(np.max(np.abs(s.y0))) - 10 * np.log10(np.var(s.y - s.y0))
         assert np.allclose(psnr, 80, atol=0.1)
-        s = SparseSmoothSignal(self.dim, psnr=0)
+        s = SparseSmoothSignal(self.dim, measurement_operator=-1, psnr=0)
         psnr = 20 * np.log10(np.max(np.abs(s.y0))) - 10 * np.log10(np.var(s.y - s.y0))
         assert np.allclose(psnr, 0, atol=0.1)
 
     def test_cache(self) -> None:
-        s = SparseSmoothSignal(self.dim)
+        s = SparseSmoothSignal(self.dim, measurement_operator=-1)
         smooth = s.smooth
         s.random_smooth()
         assert not np.allclose(s.smooth, smooth)
@@ -48,7 +48,7 @@ class Test:
         assert not np.allclose(s.y, y)
 
     def test_MyMatrixFreeOperator(self) -> None:
-        s = SparseSmoothSignal(self.dim)
+        s = SparseSmoothSignal(self.dim, measurement_operator=-1)
         x = np.random.randint(1000, size=self.dim).ravel()
         y = np.random.randint(1000, size=self.dim).ravel()
 
@@ -61,6 +61,11 @@ class Test:
         assert np.allclose((s.H @ x), free_op(x))
         y = y[s.random_lines]
         assert np.allclose((s.H.adjoint(y)), free_op.adjoint(y))
+
+        free_op = MyMatrixFreeOperator(self.dim)
+        y = np.random.random((self.dim[0]*self.dim[1], 2)).view(np.complex128)
+        assert np.allclose(free_op.pinv(y), free_op.adjoint(y))
+        assert np.allclose(free_op.adjoint(y), free_op.transpose(np.conj(y)).real)
 
 
 if __name__ == '__main__':
