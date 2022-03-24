@@ -16,7 +16,7 @@ class SparseSmoothSignal:
     Base class for the sparse and smooth signal.
 
     The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth,
-    yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x,
+    yo is the prefect signal obtained through a linear measurement operator L of the signal such that y0 = L @ x,
     y is the signal yo with some error represented by a gaussian white noise
 
     Attributes
@@ -32,7 +32,7 @@ class SparseSmoothSignal:
         signal x sum of sparse and smooth
     measurement_operator : np.ndarray
         matrix representing the linear sensing measurement operator used
-    H : np.ndarray
+    L : np.ndarray
         alias for measurement_operator
     psnr : float
         peak signal-to-noise ratio of the gaussian white noise added
@@ -312,17 +312,17 @@ class SparseSmoothSignal:
         fig.canvas.set_window_title(f'Spare + Smooth Signal : {name}')
         fig.suptitle(name)
 
-        im = ax1.imshow(self.x)
+        im = ax1.imshow(self.x, vmin=0, vmax=7)
         fig.colorbar(im, ax=ax1, fraction=0.047, pad=0.01)
         ax1.axis('off')
         ax1.set_title("X")
 
-        im = ax2.imshow(self.smooth)
+        im = ax2.imshow(self.smooth, vmin=0, vmax=1)
         fig.colorbar(im, ax=ax2, fraction=0.047, pad=0.01)
         ax2.axis('off')
         ax2.set_title("Smooth")
 
-        im = ax3.imshow(self.sparse)
+        im = ax3.imshow(self.sparse, vmin=0, vmax=6)
         fig.colorbar(im, ax=ax3, fraction=0.047, pad=0.01)
         ax3.axis('off')
         ax3.set_title("Spare")

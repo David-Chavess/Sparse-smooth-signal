@@ -69,48 +69,10 @@ class Test:
 
 
 if __name__ == '__main__':
-    # test = Test()
-    # test.test_operator()
-    # test.test_noise()
-    # test.test_cache()
-    # test.test_MyMatrixFreeOperator()
-    # print("Test Done")
-
-    dim = (1024, 1024)
-    x = 125
-
-    op = MyMatrixFreeOperator(dim)
-    s = SparseSmoothSignal(dim, measurement_operator=op)
-    s.plot(f"1024x1024, {x}")
-
-    dim = (256, 256)
-
-    op = MyMatrixFreeOperator(dim)
-    s = SparseSmoothSignal(dim, measurement_operator=op)
-    s.plot(f"256x256, {x}")
-    s.show()
-
-    s1 = SparseSmoothSignal(dim)
-    s1.plot("Base")
-
-    t1 = timeit.timeit()
-    solver = SparseSmoothSolver(s1.y, s1.H, 0.1, 0.1, "deriv1")
-    x1, x2 = solver.solve()
-    t2 = timeit.timeit()
-    s2 = SparseSmoothSignal(dim, sparse=x1.reshape(dim), smooth=x2.reshape(dim), measurement_operator=s1.H)
-    s2.plot("op1")
-
-    op = MyMatrixFreeOperator(dim)
-    s1.measurement_operator = op
-
-    t3 = timeit.timeit()
-    solver = SparseSmoothSolver(s1.y, s1.H, 0.1, 0.1, "deriv1")
-    x1, x2 = solver.solve()
-    t4 = timeit.timeit()
-    s2 = SparseSmoothSignal(dim, sparse=x1.reshape(dim), smooth=x2.reshape(dim), measurement_operator=s1.H)
-    s2.plot("op2")
-
-    print(t2-t1)
-    print(t4-t3)
-    s2.show()
+    test = Test()
+    test.test_operator()
+    test.test_noise()
+    test.test_cache()
+    test.test_MyMatrixFreeOperator()
+    print("Test Done")
 

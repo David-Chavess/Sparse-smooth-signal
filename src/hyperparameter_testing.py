@@ -13,8 +13,20 @@ from src.sparse_smooth_solver import SparseSmoothSolver
 from src.tikhonov_solver import TikhonovSolver
 
 
-def loss(x1, x2):
-    return np.mean((x1 - x2) ** 2)
+def loss(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+    return np.sum((x1 - x2) ** 2)
+
+
+def print_best(loss_x, loss_x1, loss_x2) -> None:
+    print("Sparse + Smooth:")
+    for x in sorted(loss_x, key=loss_x.get):
+        print(f"{x} : {loss_x[x]}")
+    print("Sparse:")
+    for x in sorted(loss_x1, key=loss_x1.get):
+        print(f"{x} : {loss_x1[x]}")
+    print("Smooth:")
+    for x in sorted(loss_x2, key=loss_x2.get):
+        print(f"{x} : {loss_x2[x]}")
 
 
 def plot_3(x: np.ndarray, x_tik: np.ndarray, x_lasso: np.ndarray, name: str = "") -> None:
@@ -69,6 +81,19 @@ def plot_4(x_sparse: np.ndarray, x_smooth: np.ndarray, x1: np.ndarray, x2: np.nd
     cbar = fig.colorbar(im_p, cax=cb_ax)
 
 
+def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | str | LinearOperator, name: str):
+    solver = SparseSmoothSolver(s.y, s.H, l1, l2, op)
+    x1, x2 = solver.solve()
+
+    x1 = x1.reshape(s.dim)
+    x2 = x2.reshape(s.dim)
+    x = x1 + x2
+
+    plot_4(s.sparse, s.smooth, x1, x2, name)
+
+    return loss(s.x, x), loss(s.sparse, x1), loss(s.smooth, x2)
+
+
 def test_solvers(s: SparseSmoothSignal, lambda1: (float, float), lambda2: (float, float | LinearOperator)):
     sol = SparseSmoothSolver(s.y, s.H, lambda1[0], lambda2[0], "deriv1")
     x_ss = sol.solve()
@@ -90,51 +115,50 @@ def test_solvers(s: SparseSmoothSignal, lambda1: (float, float), lambda2: (float
     s.show()
 
 
-def test_hyperparameters(s: SparseSmoothSignal, H: List[float], lambda1: List[float], lambda2: List[float],
+def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambda1: List[float], lambda2: List[float],
                          operators: List[None | str | LinearOperator], psnr: List[float]):
     size = s.dim[0] * s.dim[1]
     loss_x = {}
     loss_x1 = {}
     loss_x2 = {}
-    for h in H:
-        op = MyMatrixFreeOperator(s.dim, int(h * size))
+    for m in L:
+        op = MyMatrixFreeOperator(s.dim, int(m * size))
         s.H = op
         for p in psnr:
             s.gaussian_noise(p)
             for l1 in lambda1:
                 for l2 in lambda2:
                     for op in operators:
-                        solver = SparseSmoothSolver(s.y, s.H, l1, l2, op)
-                        x1, x2 = solver.solve()
+                        name = f"Lambda1:{l1}, Lambda2:{l2}, H:{m * 100}% measurements, psnr:{p}, l2 operator:{op}"
+                        loss_x[name], loss_x1[name], loss_x2[name] = test(s, l1, l2, op, name)
 
-                        x1 = x1.reshape(s.dim)
-                        x2 = x2.reshape(s.dim)
-                        x = x1 + x2
+    print_best(loss_x, loss_x1, loss_x2)
+    s.show()
 
-                        name = f"Lambda1:{l1}, Lambda2:{l2}, H:{h * 100}% measurements, psnr:{p}, l2 operator:{op}"
-                        plot_4(s.sparse, s.smooth, x1, x2, name)
 
-                        loss_x[name] = loss(s.x, x)
-                        loss_x1[name] = loss(s.sparse, x1)
-                        loss_x2[name] = loss(s.smooth, x2)
+def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: List[float],
+                operator: None | str | LinearOperator = None, psnr: float = 50.):
 
-    print("Sparse + Smooth:")
-    for x in sorted(loss_x, key=loss_x.get):
-        print(f"{x} : {loss_x[x]}")
-    print("Sparse:")
-    for x in sorted(loss_x1, key=loss_x1.get):
-        print(f"{x} : {loss_x1[x]}")
-    print("Smooth:")
-    for x in sorted(loss_x2, key=loss_x2.get):
-        print(f"{x} : {loss_x2[x]}")
+    op = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
+    s.H = op
+    s.gaussian_noise(psnr)
 
+    loss_x = {}
+    loss_x1 = {}
+    loss_x2 = {}
+    for l in lambdas:
+        for t in thetas:
+            name = f"Lambda:{l}, Theta:{t}, H:{L * 100}% measurements, psnr:{psnr}, l2 operator:{operator}"
+            loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), operator, name)
+
+    print_best(loss_x, loss_x1, loss_x2)
     s.show()
 
 
 if __name__ == '__main__':
     dim = (64, 64)
     opf = MyMatrixFreeOperator(dim)
-    s = SparseSmoothSignal(dim)
-    s.plot()
-    # test_solvers(s, (0.1, 0.1), (0.1, 0.1))
-    test_hyperparameters(s, [0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5], [0.1], [0.1], ["deriv1"], [50.0])
+    s1 = SparseSmoothSignal(dim, measurement_operator=opf)
+    test_lambda(s1, 0.5, [0.05, 0.1, 0.2, 0.3], [0.1, 0.25, 0.5], "D", 50.)
+    # test_solvers(s1, (0.1, 0.1), (0.1, 0.1))
+    # test_hyperparameters(s1, [0.2], ([0.1], [0.1, 0.25, 0.5, 0.75]), ["D"], [50.0])
