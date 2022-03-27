@@ -4,7 +4,7 @@ import numpy as np
 from pycsou.core import LinearOperator
 from pycsou.func import SquaredL2Loss, DiffFuncHStack, NullDifferentiableFunctional, NullProximableFunctional, \
     ProxFuncHStack, L1Norm, SquaredL2Norm
-from pycsou.linop import LinOpHStack, FirstDerivative
+from pycsou.linop import LinOpHStack, FirstDerivative, SecondDerivative
 from pycsou.opt import APGD
 
 from src.solver import Solver
@@ -21,6 +21,9 @@ class SparseSmoothSolver(Solver):
         if isinstance(l2operator, str):
             if l2operator == "D":
                 l2operator = FirstDerivative(operator.shape[1])
+                l2operator.compute_lipschitz_cst(tol=1e-3)
+            elif l2operator == "D2":
+                l2operator = SecondDerivative(operator.shape[1])
                 l2operator.compute_lipschitz_cst(tol=1e-3)
 
         self.l2operator = l2operator

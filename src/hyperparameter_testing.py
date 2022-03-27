@@ -34,15 +34,15 @@ def plot_3(x: np.ndarray, x_tik: np.ndarray, x_lasso: np.ndarray, name: str = ""
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
-    im = ax1.imshow(x, vmin=0, vmax=6)
+    im = ax1.imshow(x, vmin=0, vmax=7)
     ax1.set_axis_off()
     ax1.set_title("Spare + Smooth")
 
-    im = ax2.imshow(x_tik, vmin=0, vmax=6)
+    im = ax2.imshow(x_tik, vmin=0, vmax=7)
     ax2.set_axis_off()
-    ax2.set_title("Smooth")
+    ax2.set_title("Tikhonov")
 
-    im = ax3.imshow(x_lasso, vmin=0, vmax=6)
+    im = ax3.imshow(x_lasso, vmin=0, vmax=7)
     ax3.set_axis_off()
     ax3.set_title("Lasso")
 
@@ -82,7 +82,8 @@ def plot_4(x_sparse: np.ndarray, x_smooth: np.ndarray, x1: np.ndarray, x2: np.nd
 
 
 def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | str | LinearOperator, name: str):
-    solver = SparseSmoothSolver(s.y, s.H, l1, l2, op)
+    m = np.max(np.abs(s.H.adjoint(s.y)))
+    solver = SparseSmoothSolver(s.y, s.H, l1 * m, l2 * m, op)
     x1, x2 = solver.solve()
 
     x1 = x1.reshape(s.dim)
@@ -94,23 +95,27 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | str | LinearOpe
     return loss(s.x, x), loss(s.sparse, x1), loss(s.smooth, x2)
 
 
-def test_solvers(s: SparseSmoothSignal, lambda1: (float, float), lambda2: (float, float | LinearOperator)):
-    sol = SparseSmoothSolver(s.y, s.H, lambda1[0], lambda2[0], "deriv1")
+def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, op: None | str | LinearOperator = None):
+    m = np.max(np.abs(s.H.adjoint(s.y)))
+    l1 = lambda1 * m
+    l2 = lambda2 * m
+
+    sol = SparseSmoothSolver(s.y, s.H, l1, l2, op)
     x_ss = sol.solve()
     x_ss = (x_ss[0]+x_ss[1]).reshape(dim)
 
-    sol = TikhonovSolver(s.y, s.H, lambda2[1])
+    sol = TikhonovSolver(s.y, s.H, l2)
     _, x_tik = sol.solve()
     x_tik = x_tik.reshape(dim)
 
-    sol = LassoSolver(s.y, s.H, lambda1[1])
+    sol = LassoSolver(s.y, s.H, l1)
     x_lasso, _ = sol.solve()
     x_lasso = x_lasso.reshape(dim)
 
     plot_3(x_ss, x_tik, x_lasso)
 
     print(f"Sparse + Smooth loss : {loss(s.x, x_ss)}")
-    print(f"Tik loss : {loss(s.x, x_tik)}")
+    print(f"Tikhonov loss : {loss(s.x, x_tik)}")
     print(f"Lasso loss : {loss(s.x, x_lasso)}")
     s.show()
 
@@ -129,7 +134,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambda1: List[fl
             for l1 in lambda1:
                 for l2 in lambda2:
                     for op in operators:
-                        name = f"Lambda1:{l1}, Lambda2:{l2}, H:{m * 100}% measurements, psnr:{p}, l2 operator:{op}"
+                        name = f"λ1:{l1:.2f}, λ2:{l2:.2f}, {m:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()} "
                         loss_x[name], loss_x1[name], loss_x2[name] = test(s, l1, l2, op, name)
 
     print_best(loss_x, loss_x1, loss_x2)
@@ -139,8 +144,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambda1: List[fl
 def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: List[float],
                 operator: None | str | LinearOperator = None, psnr: float = 50.):
 
-    op = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
-    s.H = op
+    s.H = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
     s.gaussian_noise(psnr)
 
     loss_x = {}
@@ -148,7 +152,7 @@ def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: L
     loss_x2 = {}
     for l in lambdas:
         for t in thetas:
-            name = f"Lambda:{l}, Theta:{t}, H:{L * 100}% measurements, psnr:{psnr}, l2 operator:{operator}"
+            name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator.__str__()}"
             loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), operator, name)
 
     print_best(loss_x, loss_x1, loss_x2)
@@ -156,9 +160,14 @@ def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: L
 
 
 if __name__ == '__main__':
-    dim = (64, 64)
-    opf = MyMatrixFreeOperator(dim)
-    s1 = SparseSmoothSignal(dim, measurement_operator=opf)
-    test_lambda(s1, 0.5, [0.05, 0.1, 0.2, 0.3], [0.1, 0.25, 0.5], "D", 50.)
-    # test_solvers(s1, (0.1, 0.1), (0.1, 0.1))
-    # test_hyperparameters(s1, [0.2], ([0.1], [0.1, 0.25, 0.5, 0.75]), ["D"], [50.0])
+    dim = (128, 128)
+    seed = 11
+    s1 = SparseSmoothSignal(dim)
+    s1.random_sparse(seed)
+    s1.random_smooth(seed)
+
+    # test_lambda(s1, 0.2, [0.1, 0.15, 0.2], [0.1])
+    # s1.H = MyMatrixFreeOperator(dim, int(0.5 * dim[0] * dim[1]))
+    # s1.plot()
+    # test_solvers(s1, 0.2*0.1, 0.2*0.9, "D")
+    # test_hyperparameters(s1, [1], [0.2*0.1], [0.2*0.9], ["D", "D2"], [50.0])

@@ -10,7 +10,8 @@ from src.solver import Solver
 
 class TikhonovSolver(Solver):
 
-    def __init__(self, y: np.ndarray, operator: LinearOperator, lambda_: float, l2_op: None | LinearOperator) -> None:
+    def __init__(self, y: np.ndarray, operator: LinearOperator, lambda_: float,
+                 l2_op: None | LinearOperator = None) -> None:
         super().__init__(y, operator)
         self.l2_op = l2_op
         self.lambda_ = lambda_

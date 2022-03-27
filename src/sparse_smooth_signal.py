@@ -223,28 +223,36 @@ class SparseSmoothSignal:
         # delete deprecated cached values
         self.__y = None
 
-    def random_sparse(self) -> None:
+    def random_sparse(self, seed: None | int = None) -> None:
         """
         Creates a new random sparse component
         """
-        rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005)
+        if seed is None:
+            rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005)
+        else:
+            rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005, random_state=seed)
         rand_matrix.data += 2
         self.sparse = rand_matrix.toarray()
 
-    def random_smooth(self) -> None:
+    def random_smooth(self, seed: None | int = None) -> None:
         """
         Creates a new random smooth component
         """
         # number of gaussian we create
         nb = 100
 
+        if seed is None:
+            rng = np.random.default_rng()
+        else:
+            rng = np.random.default_rng(seed)
+
         # grid
         x = np.linspace(-1, 1, self.__dim[0])
         y = np.linspace(-1, 1, self.__dim[1])
         x, y = np.meshgrid(x, y)
         samples1 = np.stack((x.flatten(), y.flatten()), axis=-1)
+
         # random gaussian's centers
-        rng = np.random.default_rng()
         samples2 = np.stack((2 * rng.random(size=nb) - 1, 2 * rng.random(size=nb) - 1), axis=-1)
 
         sigma = 1 / 5
