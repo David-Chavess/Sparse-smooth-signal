@@ -182,7 +182,7 @@ class SparseSmoothSignal:
     def noise(self) -> np.ndarray:
         """np.ndarray: Gaussian white noise added"""
         if self.__noise is None:
-            self.gaussian_noise()
+            self.gaussian_noise(self.__psnr)
         return self.__noise
 
     @noise.setter
