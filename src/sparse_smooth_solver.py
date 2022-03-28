@@ -11,9 +11,28 @@ from src.solver import Solver
 
 
 class SparseSmoothSolver(Solver):
+    """
+    Solver using APGD algorithm to solve the inverse problem of Hx = y, where H is an operator and x an image,
+    with 2 regularization term, L1 and L2.
+     """
 
     def __init__(self, y: np.ndarray, operator: LinearOperator, lambda1: float = 0.1, lambda2: float = 0.1,
                  l2operator: None | str | LinearOperator = None) -> None:
+        """
+        Parameters
+        ----------
+        y: np.ndarray
+            Measurements y used in the inverse problem obtained by the linear measurement operator.
+        operator: LinearOperator
+            Linear operator used for measurements.
+        lambda1: float
+            Weight of the L1 regularization term.
+        lambda2: float
+            Weight of the L2 regularization term.
+        l2operator:
+            Operator used in the L2 regularization term if any.
+            If "D" we use FirstDerivative, if "D2" we use SecondDerivative.
+        """
         super().__init__(y, operator)
 
         self.lambda1 = lambda1

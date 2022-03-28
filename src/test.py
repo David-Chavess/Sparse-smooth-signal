@@ -1,10 +1,7 @@
-import timeit
-
 import numpy as np
 
 from src.solver import MyMatrixFreeOperator
 from src.sparse_smooth_signal import SparseSmoothSignal
-from src.sparse_smooth_solver import SparseSmoothSolver
 
 
 class Test:

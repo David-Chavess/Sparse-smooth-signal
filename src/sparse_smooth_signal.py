@@ -17,7 +17,7 @@ class SparseSmoothSignal:
 
     The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth,
     yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x,
-    y is the signal yo with some error represented by a gaussian white noise
+    y is the signal yo with some error represented by a gaussian white noise.
     """
 
     def __init__(self, dim: Tuple[int, int],
@@ -29,20 +29,20 @@ class SparseSmoothSignal:
         Parameters
         ----------
         dim : Tuple[int ,int]
-            Shape of the signal x
+            Shape of the signal x.
         sparse : None | np.ndarray
-            Matrix representing the sparse part of the signal
-            if None sparse is randomly created by random_sparse
+            Matrix representing the sparse part of the signal.
+            If None sparse is randomly created by random_sparse.
         smooth : None | np.ndarray
-            Matrix representing the smooth part of the signal
-            if None smooth is randomly created by random_smooth
+            Matrix representing the smooth part of the signal.
+            If None smooth is randomly created by random_smooth.
         measurement_operator : None | int | np.ndarray | LinearOperator
-            Linear operator used for measurements
-            if None there is no operator
-            if int the operator is taken as measurement_operator number of lines of the 2d DFT created by
-            create_measurement_operator, with -1 we take all lines
+            Linear operator used for measurements.
+            If None there is no operator.
+            If int the operator is taken as measurement_operator number of lines of the 2d DFT created by
+            create_measurement_operator, with -1 we take all lines.
         psnr : float
-            peak signal-to-noise ratio of the gaussian white noise added, 50. by default
+            peak signal-to-noise ratio of the gaussian white noise added, 50. by default.
         """
         assert dim[0] >= 0 and dim[1] >= 0, "Negative dimension is not valid"
 

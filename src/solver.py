@@ -11,26 +11,63 @@ from pycsou.linop import DenseLinearOperator
 
 
 class Solver(ABC):
+    """
+    Basic abstract class for all solvers.
+
+    Any instance/subclass of this class must implement the abstract method solve()
+    """
 
     def __init__(self, y: np.ndarray, operator: LinearOperator) -> None:
+        """
+        Parameters
+        ----------
+        y: np.ndarray
+            Measurements y used in the inverse problem obtained by the linear measurement operator.
+        operator: LinearOperator
+            Linear operator used for measurements.
+        """
         super().__init__()
         self.y = y
         self.operator = operator
 
     @abstractmethod
-    def solve(self) -> (np.ndarray, np.ndarray):
+    def solve(self) -> Tuple[None | np.ndarray, None | np.ndarray]:
+        """
+        Run the solver
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            Solver outcome. Two flatten images (x1, x2) where x1 is the sparse part and x2 the smooth one.
+        """
         pass
 
 
 class MyOperator(DenseLinearOperator):
+    """My linear operator used in the solver, build by a complex matrix where in the adjoint method we ignore
+    the imaginary part, because our solver works only with real numbers"""
 
     def adjoint(self, y: Union[Number, np.ndarray, da.core.Array]) -> Union[Number, np.ndarray]:
         return super().adjoint(y).real
 
 
 class MyMatrixFreeOperator(LinearOperator):
+    """A linear operator that is matrix free, so that it can much bigger. This operator is a Two dimensional Fourier
+    Transform. It uses the fft2 from numpy in forward mode and ifft2 in adjoint mode."""
 
     def __init__(self, dim: Tuple[int, int], lines: None | int | np.ndarray = None):
+        """
+        Parameters
+        ----------
+        dim: Tuple[int, int]
+            dimension if the image
+        lines: None | int | np.ndarray
+            Samples kept.
+            If None we keep all samples.
+            If int we keep the specified number of samples chosen randomly.
+            If np.ndarray, it is list of the sample we want to use, we specified the index each sample
+            from 0 to dim[0] * dim[1].
+        """
         size = dim[0] * dim[1]
         shape = (size, size)
         self.dim = dim

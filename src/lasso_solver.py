@@ -9,9 +9,24 @@ from src.solver import Solver
 
 
 class LassoSolver(Solver):
+    """
+    Solver solving the Lasso problem
+    """
 
     def __init__(self, y: np.ndarray, operator: LinearOperator, lambda_: float,
                  penalty_operator: None | LinearOperator = None) -> None:
+        """
+        Parameters
+        ----------
+        y: np.ndarray
+            Measurements y used in the inverse problem obtained by the linear measurement operator.
+        operator: LinearOperator
+            Linear operator used for measurements.
+        lambda_: float
+            Weight of the L1 regularization term.
+        penalty_operator: None | LinearOperator
+            Operator used in the L1 regularization term if any.
+        """
         super().__init__(y, operator)
         self.lambda_ = lambda_
         self.penalty_operator = penalty_operator

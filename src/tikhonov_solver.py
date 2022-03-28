@@ -9,9 +9,24 @@ from src.solver import Solver
 
 
 class TikhonovSolver(Solver):
+    """
+    Solver solving the Tikhonov regularization problem
+    """
 
     def __init__(self, y: np.ndarray, operator: LinearOperator, lambda_: float,
                  l2_op: None | LinearOperator = None) -> None:
+        """
+        Parameters
+        ----------
+        y: np.ndarray
+            Measurements y used in the inverse problem obtained by the linear measurement operator.
+        operator: LinearOperator
+            Linear operator used for measurements.
+        lambda_: float
+            Weight of the L2 regularization term.
+        l2_op: None | LinearOperator
+            Operator used in the L2 regularization term if any.
+        """
         super().__init__(y, operator)
         self.l2_op = l2_op
         self.lambda_ = lambda_
