@@ -194,6 +194,11 @@ class SparseSmoothSignal:
     def random_sparse(self, seed: None | int = None) -> None:
         """
         Creates a new random sparse component
+
+        Parameters
+        ----------
+        seed : None | int
+            seed used for the random generator
         """
         if seed is None:
             rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005)
@@ -205,6 +210,11 @@ class SparseSmoothSignal:
     def random_smooth(self, seed: None | int = None) -> None:
         """
         Creates a new random smooth component
+
+        Parameters
+        ----------
+        seed : None | int
+            seed used for the random generator
         """
         # number of gaussian we create
         nb = 100

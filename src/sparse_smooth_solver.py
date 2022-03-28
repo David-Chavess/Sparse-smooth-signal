@@ -16,6 +16,9 @@ class SparseSmoothSolver(Solver):
     with 2 regularization term, L1 and L2.
      """
 
+    __D = None
+    __D2 = None
+
     def __init__(self, y: np.ndarray, operator: LinearOperator, lambda1: float = 0.1, lambda2: float = 0.1,
                  l2operator: None | str | LinearOperator = None) -> None:
         """
@@ -39,11 +42,21 @@ class SparseSmoothSolver(Solver):
         self.lambda2 = lambda2
         if isinstance(l2operator, str):
             if l2operator == "D":
-                l2operator = FirstDerivative(operator.shape[1])
-                l2operator.compute_lipschitz_cst(tol=1e-3)
+                if self.__D is None:
+                    l2operator = FirstDerivative(operator.shape[1])
+                    l2operator.compute_lipschitz_cst(tol=1e-3)
+                    # Cache D so that we don't need to compute the lipschitz_cst everytime we use a solver with D
+                    self.__D = l2operator
+                else:
+                    l2operator = self.__D
             elif l2operator == "D2":
-                l2operator = SecondDerivative(operator.shape[1])
-                l2operator.compute_lipschitz_cst(tol=1e-3)
+                if self.__D2 is None:
+                    l2operator = SecondDerivative(operator.shape[1])
+                    l2operator.compute_lipschitz_cst(tol=1e-3)
+                    # Cache D2 same as D
+                    self.__D2 = l2operator
+                else:
+                    l2operator = self.__D
 
         self.l2operator = l2operator
 
