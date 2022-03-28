@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
 from pycsou.core import LinearOperator
+from pycsou.linop import FirstDerivative, SecondDerivative
 
 from src.lasso_solver import LassoSolver
 from src.solver import MyMatrixFreeOperator
@@ -15,6 +16,17 @@ from src.tikhonov_solver import TikhonovSolver
 
 def loss(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     return np.sum((x1 - x2) ** 2)
+
+
+def get_D(D: str, shape: Tuple[int, int]) -> LinearOperator:
+    size = shape[0] * shape[1]
+    if D == "D":
+        op = (FirstDerivative(size, shape=shape, axis=0) + FirstDerivative(size, shape=shape, axis=1)) / 2
+        op.compute_lipschitz_cst(tol=1e-3)
+    elif D == "D2":
+        op = (SecondDerivative(size, shape=shape, axis=0) + SecondDerivative(size, shape=shape, axis=1)) / 2
+        op.compute_lipschitz_cst(tol=1e-3)
+    return op
 
 
 def print_best(loss_x, loss_x1, loss_x2) -> None:
@@ -81,7 +93,7 @@ def plot_4(x_sparse: np.ndarray, x_smooth: np.ndarray, x1: np.ndarray, x2: np.nd
     cbar = fig.colorbar(im_p, cax=cb_ax)
 
 
-def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | str | LinearOperator, name: str):
+def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator, name: str):
     m = np.max(np.abs(s.H.adjoint(s.y)))
     solver = SparseSmoothSolver(s.y, s.H, l1 * m, l2 * m, op)
     x1, x2 = solver.solve()
@@ -120,22 +132,25 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, op: None
     s.show()
 
 
-def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambda1: List[float], lambda2: List[float],
+def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[float], thetas: List[float],
                          operators: List[None | str | LinearOperator], psnr: List[float]):
     size = s.dim[0] * s.dim[1]
     loss_x = {}
     loss_x1 = {}
     loss_x2 = {}
-    for m in L:
-        op = MyMatrixFreeOperator(s.dim, int(m * size))
-        s.H = op
-        for p in psnr:
-            s.gaussian_noise(p)
-            for l1 in lambda1:
-                for l2 in lambda2:
-                    for op in operators:
-                        name = f"λ1:{l1:.2f}, λ2:{l2:.2f}, {m:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()} "
-                        loss_x[name], loss_x1[name], loss_x2[name] = test(s, l1, l2, op, name)
+    for op in operators:
+        if isinstance(op, str):
+            D = get_D(op, s.dim)
+        else:
+            D = op
+        for l in L:
+            s.H = MyMatrixFreeOperator(s.dim, int(l * size))
+            for p in psnr:
+                s.gaussian_noise(p)
+                for l in lambdas:
+                    for t in thetas:
+                        name = f"λ:{l:.2f}, θ:{t:.2f}, {l:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()} "
+                        loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), D, name)
 
     print_best(loss_x, loss_x1, loss_x2)
     s.show()
@@ -146,6 +161,10 @@ def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: L
 
     s.H = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
     s.gaussian_noise(psnr)
+    if isinstance(operator, str):
+        D = get_D(operator, s.dim)
+    else:
+        D = operator
 
     loss_x = {}
     loss_x1 = {}
@@ -153,7 +172,7 @@ def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: L
     for l in lambdas:
         for t in thetas:
             name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator.__str__()}"
-            loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), operator, name)
+            loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), D, name)
 
     print_best(loss_x, loss_x1, loss_x2)
     s.show()
@@ -166,8 +185,9 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
-    # test_lambda(s1, 0.2, [0.1, 0.15, 0.2], [0.1])
-    # s1.H = MyMatrixFreeOperator(dim, int(0.5 * dim[0] * dim[1]))
+    test_lambda(s1, 0.4, [0.1], [0.01, 0.03, 0.05, 0.07, 0.1], "D")
+    # s1.H = MyMatrixFreeOperator(shape, int(0.5 * shape[0] * shape[1]))
     # s1.plot()
     # test_solvers(s1, 0.2*0.1, 0.2*0.9, "D")
-    # test_hyperparameters(s1, [1], [0.2*0.1], [0.2*0.9], ["D", "D2"], [50.0])
+
+    # test_hyperparameters(s1, [0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1], [0.1], [0.1], ["D"], [50.0])
