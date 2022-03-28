@@ -42,7 +42,7 @@ class SparseSmoothSolver(Solver):
         self.lambda2 = lambda2
         if isinstance(l2operator, str):
             if l2operator == "D":
-                if self.__D is None:
+                if self.__D is None or operator.shape[1] != self.__D.shape[1]:
                     l2operator = FirstDerivative(operator.shape[1])
                     l2operator.compute_lipschitz_cst(tol=1e-3)
                     # Cache D so that we don't need to compute the lipschitz_cst everytime we use a solver with D
@@ -50,7 +50,7 @@ class SparseSmoothSolver(Solver):
                 else:
                     l2operator = self.__D
             elif l2operator == "D2":
-                if self.__D2 is None:
+                if self.__D2 is None or operator.shape[1] != self.__D2.shape[1]:
                     l2operator = SecondDerivative(operator.shape[1])
                     l2operator.compute_lipschitz_cst(tol=1e-3)
                     # Cache D2 same as D
