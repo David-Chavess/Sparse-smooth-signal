@@ -18,74 +18,31 @@ class SparseSmoothSignal:
     The signal is composed of 2 signals, one sparse and one smooth, x = x_sparse + x_smooth,
     yo is the prefect signal obtained through a linear measurement operator H of the signal such that y0 = H @ x,
     y is the signal yo with some error represented by a gaussian white noise
-
-    Attributes
-    ----------
-
-    dim : Tuple[int ,int]
-        shape of the signal x
-    sparse : np.ndarray
-        matrix representing the sparse part of the signal
-    smooth : np.ndarray
-        matrix representing the smooth part of the signal
-    x : np.ndarray
-        signal x sum of sparse and smooth
-    measurement_operator : np.ndarray
-        matrix representing the linear sensing measurement operator used
-    H : np.ndarray
-        alias for measurement_operator
-    psnr : float
-        peak signal-to-noise ratio of the gaussian white noise added
-    noise : np.ndarray
-        gaussian white noise added
-    yo : np.ndarray
-        prefect output signal
-    y : np.ndarray
-        output signal
-
-    Methods
-    -------
-    random_sparse() -> None
-        Creates a new random sparse component
-    random_smooth() -> None
-        Creates a new random smooth component
-    random_measurement_operator(size: int) -> None
-        Creates a new random measurement operator with size random lines of the 2d DFT matrix
-    gaussian_noise(psnr: float = None) -> None:
-        Creates a new gaussian white noise
-    plot(name: str =  "") -> None
-        Plot all signals in 2d
-    show() -> None
-        Show the plotted signals, it is used after plot()
-        needed if we want to plot multiple SparseSmoothSignal
-    create_measurement_operator(dim: Tuple[int, int]) -> np.ndarray
-        Create a 2d DFT matrix
-        Used by multiplying to the flatted image
     """
 
     def __init__(self, dim: Tuple[int, int],
                  sparse: None | np.ndarray = None,
                  smooth: None | np.ndarray = None,
                  measurement_operator: None | int | np.ndarray | LinearOperator = None,
-                 psnr: float = 50.0) -> None:
+                 psnr: float = 50.) -> None:
         """
         Parameters
         ----------
         dim : Tuple[int ,int]
-            shape of the signal x
+            Shape of the signal x
         sparse : None | np.ndarray
-            matrix representing the sparse part of the signal
+            Matrix representing the sparse part of the signal
+            if None sparse is randomly created by random_sparse
         smooth : None | np.ndarray
-            matrix representing the smooth part of the signal
-        measurement_operator : None | np.ndarray 
-            matrix representing the linear sensing measurement operator used
+            Matrix representing the smooth part of the signal
+            if None smooth is randomly created by random_smooth
+        measurement_operator : None | int | np.ndarray | LinearOperator
+            Linear operator used for measurements
+            if None there is no operator
+            if int the operator is taken as measurement_operator number of lines of the 2d DFT created by
+            create_measurement_operator, with -1 we take all lines
         psnr : float
-            peak signal-to-noise ratio of the gaussian white noise added
-
-        Notes
-        -----
-        For any optionnal argumant if not specified the corresponding value will be random 
-        except psnr which is 10 by default
+            peak signal-to-noise ratio of the gaussian white noise added, 50. by default
         """
         assert dim[0] >= 0 and dim[1] >= 0, "Negative dimension is not valid"
 
@@ -129,10 +86,12 @@ class SparseSmoothSignal:
 
     @property
     def dim(self) -> Tuple[int, int]:
+        """Tuple[int ,int]: Shape of the signal x"""
         return self.__dim
 
     @property
     def sparse(self) -> np.ndarray:
+        """np.ndarray: Matrix representing the sparse part of the signal"""
         return self.__sparse
 
     @sparse.setter
@@ -145,6 +104,7 @@ class SparseSmoothSignal:
 
     @property
     def smooth(self) -> np.ndarray:
+        """np.ndarray: Matrix representing the smooth part of the signal"""
         return self.__smooth
 
     @smooth.setter
@@ -157,6 +117,8 @@ class SparseSmoothSignal:
 
     @property
     def measurement_operator(self) -> LinearOperator:
+        """LinearOperator: Linear operator used for measurements.
+        If measurement_operator is an array then we return MyOperator of the array"""
         if self.__random_lines is None:
             if isinstance(self.__measurement_operator, LinearOperator):
                 return self.__measurement_operator
@@ -175,6 +137,7 @@ class SparseSmoothSignal:
 
     @property
     def random_lines(self) -> np.ndarray:
+        """np.ndarray: Number of the lines used in measurement_operator"""
         return self.__random_lines
 
     @random_lines.setter
@@ -187,6 +150,7 @@ class SparseSmoothSignal:
 
     @property
     def H(self) -> LinearOperator:
+        """LinearOperator: Alias for measurement_operator"""
         return self.measurement_operator
 
     @H.setter
@@ -195,24 +159,28 @@ class SparseSmoothSignal:
 
     @property
     def x(self) -> np.ndarray:
+        """np.ndarray: Signal x sum of the sparse and smooth component"""
         if self.__x is None:
             self.__x = self.__sparse + self.__smooth
         return self.__x
 
     @property
     def y0(self) -> np.ndarray:
+        """np.ndarray: Prefect output signal"""
         if self.__y0 is None:
             self.__y0 = self.H(self.x.ravel())
         return self.__y0
 
     @property
     def y(self) -> np.ndarray:
+        """np.ndarray: Output signal"""
         if self.__y is None:
             self.__y = self.y0 + self.noise
         return self.__y
 
     @property
     def noise(self) -> np.ndarray:
+        """np.ndarray: Gaussian white noise added"""
         if self.__noise is None:
             self.gaussian_noise()
         return self.__noise
@@ -282,7 +250,7 @@ class SparseSmoothSignal:
         rand = np.sort(np.random.choice(self.__size, size, replace=False))
         self.random_lines = rand
 
-    def gaussian_noise(self, psnr: float = None) -> None:
+    def gaussian_noise(self, psnr: float) -> None:
         """
         Creates a new gaussian white noise
 
@@ -290,13 +258,7 @@ class SparseSmoothSignal:
         ----------
         psnr : float
             peak signal-to-noise ratio of the gaussian white noise
-            if None then we choose the last input
-            if the psnr was never changed we take 10
         """
-        if psnr is None:
-            psnr = self.__psnr
-        else:
-            self.__psnr = psnr
         y0_max = np.max(np.abs(self.y0))
         # mean squared error in decibel
         mse_db = 20 * np.log10(y0_max) - psnr
