@@ -132,7 +132,7 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, op: None
     s.show()
 
 
-def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[float], thetas: List[float],
+def test_hyperparameters(s: SparseSmoothSignal, H: List[float], lambdas: List[float], thetas: List[float],
                          operators: List[None | str | LinearOperator], psnr: List[float]):
     size = s.dim[0] * s.dim[1]
     loss_x = {}
@@ -143,13 +143,13 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[fl
             D = get_D(op, s.dim)
         else:
             D = op
-        for l in L:
-            s.H = MyMatrixFreeOperator(s.dim, int(l * size))
+        for h in H:
+            s.H = MyMatrixFreeOperator(s.dim, int(h * size))
             for p in psnr:
                 s.gaussian_noise(p)
                 for l in lambdas:
                     for t in thetas:
-                        name = f"λ:{l:.2f}, θ:{t:.2f}, {l:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()} "
+                        name = f"λ:{l:.2f}, θ:{t:.2f}, {h:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()} "
                         loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), D, name)
 
     print_best(loss_x, loss_x1, loss_x2)
@@ -185,9 +185,9 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
-    test_lambda(s1, 0.4, [0.1], [0.01, 0.03, 0.05, 0.07, 0.1], "D")
+    # test_lambda(s1, 0.5, [0.1], [0.1], "D")
     # s1.H = MyMatrixFreeOperator(shape, int(0.5 * shape[0] * shape[1]))
     # s1.plot()
     # test_solvers(s1, 0.2*0.1, 0.2*0.9, "D")
 
-    # test_hyperparameters(s1, [0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1], [0.1], [0.1], ["D"], [50.0])
+    # test_hyperparameters(s1, [0.5, 0.75, 1], [0.1], [0.1], [None, "D", "D2"], [50.0])
