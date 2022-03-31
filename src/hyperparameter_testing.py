@@ -5,7 +5,7 @@ from typing import List, Tuple
 import numpy as np
 from matplotlib import pyplot as plt
 from pycsou.core import LinearOperator
-from pycsou.linop import Gradient
+from pycsou.linop import Gradient, Laplacian
 
 from src.lasso_solver import LassoSolver
 from src.solver import MyMatrixFreeOperator
@@ -18,14 +18,24 @@ def nmse(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     return np.sqrt(np.mean((x1 - x2) ** 2) / np.mean(x1 ** 2))
 
 
-def get_D(D: str, shape: Tuple[int, int]) -> LinearOperator:
-    grad = Gradient(shape, kind='forward')
-    grad.compute_lipschitz_cst(tol=1e-3)
-    if D == "D":
-        op = grad
-    # elif D == "D2":
-    # TODO
-    return op
+def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) -> LinearOperator:
+    if isinstance(op_l2, str):
+        if op_l2 == "D":
+            op = Gradient(dim, edge=True, kind='forward')
+        elif op_l2 == "L":
+            op = Laplacian(dim, edge=True)
+        op.compute_lipschitz_cst(tol=1e-3)
+        return op
+    else:
+        return op_l2
+
+
+def get_MyMatrixFreeOperator(dim: Tuple[int, int], L: float) -> MyMatrixFreeOperator:
+    return MyMatrixFreeOperator(dim, random_lines(dim, int(L * dim[0] * dim[1])))
+
+
+def off_set_smooth(smooth: np.ndarray, x2: np.ndarray) -> np.ndarray:
+    return np.max(smooth) - np.max(x2)  # np.abs(np.min(x2))
 
 
 def print_best(loss_x, loss_x1, loss_x2) -> None:
@@ -45,7 +55,7 @@ def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
 
     while len(points) < size:
         # 2d Gaussian
-        p = np.abs(np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], size - len(points)))
+        p = np.abs(np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], size - len(points) + 1))
         p /= np.max(p)
 
         # Cast to index
@@ -55,8 +65,10 @@ def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
         # Add to set as int types
         s = set(map(tuple, p.astype((int, int))))
         points.update(s)
-        # We don't want to point (0, 0)
-        points.discard((0, 0))
+
+    # We don't want the point (0, 0)
+    points.discard((0, 0))
+    # points.add((0, 0))
 
     # Plot distribution of points
     # v = np.array(sorted(list(points)))
@@ -79,7 +91,7 @@ def plot_3(x: np.ndarray, x_tik: np.ndarray, x_lasso: np.ndarray, name: str = ""
 
     im = ax1.imshow(x, vmin=0, vmax=7)
     ax1.set_axis_off()
-    ax1.set_title("Spare + Smooth")
+    ax1.set_title("Sparse + Smooth")
 
     im = ax2.imshow(x_tik, vmin=0, vmax=7)
     ax2.set_axis_off()
@@ -116,41 +128,60 @@ def plot_4(x_sparse: np.ndarray, x_smooth: np.ndarray, x1: np.ndarray, x2: np.nd
     ax4.axis('off')
     ax4.set_title("Reconstructed Smooth")
 
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.95,
+    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.92,
                         wspace=0.1, hspace=0.1)
-    cb_ax = fig.add_axes([0.95, 0.05, 0.02, 0.85])
+    cb_ax = fig.add_axes([0.92, 0.05, 0.02, 0.85])
     cbar = fig.colorbar(im_s, cax=cb_ax)
     cb_ax = fig.add_axes([0.45, 0.05, 0.02, 0.85])
     cbar = fig.colorbar(im_p, cax=cb_ax)
 
 
-def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator, name: str):
+def plot_loss(x, loss_x1, loss_x2, name: str = "", var: str = ""):
+    fig, (ax1, ax2), = plt.subplots(1, 2, figsize=(10, 5))
+    fig.canvas.manager.set_window_title(f'Loss comparison')
+    fig.suptitle(name)
+
+    ax1.plot(x, loss_x1)
+    ax1.set_xlabel(var)
+    ax1.set_ylabel("NMSE")
+    ax1.set_title("L1 loss")
+
+    ax2.plot(x, loss_x2)
+    ax2.set_xlabel(var)
+    ax2.set_ylabel("NMSE")
+    ax2.set_title("L2 loss")
+
+
+def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator) -> Tuple[np.ndarray, np.ndarray]:
     m = np.max(np.abs(s.H.adjoint(s.y)))
     solver = SparseSmoothSolver(s.y, s.H, l1 * m, l2 * m, op)
     x1, x2 = solver.solve()
 
     x1 = x1.reshape(s.dim)
     x2 = x2.reshape(s.dim)
-    x = x1 + x2
 
-    plot_4(s.sparse, s.smooth, x1, x2, name)
+    print(f"x1 min: {np.min(x1)}")
+    print(f"x2 min: {np.min(x2)}")
+    print(f"x1 nb min: {(x1 < 0).sum()}")
+    print(f"x2 nb min: {(x2 < 0).sum()}")
 
-    return nmse(s.x, x), nmse(s.sparse, x1), nmse(s.smooth, x2)
+    x2 += off_set_smooth(s.smooth, x2)
+
+    print(f"x2 min: {np.min(x2)}")
+    print(f"x2 max: {np.max(x2)}")
+    return x1, x2
 
 
-def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, operator: None | str | LinearOperator = None):
-    if isinstance(operator, str):
-        D = get_D(operator, s.dim)
-    else:
-        D = operator
+def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, operator_l2: None | str | LinearOperator = None):
+    op = get_L2_operator(s.dim, operator_l2)
 
     m = np.max(np.abs(s.H.adjoint(s.y)))
     l1 = lambda1 * m
     l2 = lambda2 * m
 
-    sol = SparseSmoothSolver(s.y, s.H, l1, l2, D)
+    sol = SparseSmoothSolver(s.y, s.H, l1, l2, op)
     x_ss = sol.solve()
-    x_ss = (x_ss[0] + x_ss[1]).reshape(s.dim)
+    x_ss = (x_ss[0] + x_ss[1] + off_set_smooth(s.smooth, x_ss[1])).reshape(s.dim)
 
     sol = TikhonovSolver(s.y, s.H, l2)
     _, x_tik = sol.solve()
@@ -168,61 +199,116 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, operator
     s.show()
 
 
-def test_hyperparameters(s: SparseSmoothSignal, H: List[float], lambdas: List[float], thetas: List[float],
-                         operators: List[None | str | LinearOperator], psnr: List[float]):
-    size = s.dim[0] * s.dim[1]
+def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[float], thetas: List[float],
+                         operators_l2: List[None | str | LinearOperator], psnr: List[float]):
     loss_x = {}
     loss_x1 = {}
     loss_x2 = {}
-    for op in operators:
-        if isinstance(op, str):
-            D = get_D(op, s.dim)
-        else:
-            D = op
-        for h in H:
-            s.H = MyMatrixFreeOperator(s.dim, int(h * size))
+    for op in operators_l2:
+        op_l2 = get_L2_operator(s.dim, op)
+        for h in L:
+            s.H = get_MyMatrixFreeOperator(s.dim, h)
             for p in psnr:
                 s.gaussian_noise(p)
                 for l in lambdas:
                     for t in thetas:
-                        name = f"λ:{l:.2f}, θ:{t:.2f}, {h:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()} "
-                        loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), D, name)
+                        name = f"λ:{l:.2f}, θ:{t:.2f}, {h:.1%} measurements, PSNR:{p:.0f}, l2 operator:{op.__str__()}"
+                        x1, x2 = test(s, l * t, l * (1 - t), op_l2)
+                        plot_4(s.sparse, s.smooth, x1, x2, name)
+                        loss_x[name] = nmse(s.x, x1 + x2)
+                        loss_x1[name] = nmse(s.sparse, x1)
+                        loss_x2[name] = nmse(s.smooth, x2)
 
     print_best(loss_x, loss_x1, loss_x2)
     s.show()
 
 
-def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: List[float],
-                operator: None | str | LinearOperator = None, psnr: float = 50.):
-
-    s.H = MyMatrixFreeOperator(s.dim, random_lines(s.dim, int(L * s.dim[0] * s.dim[1])))
+def test_lambda_thetas(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: List[float],
+                       operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+    s.H = get_MyMatrixFreeOperator(s.dim, L)
     s.gaussian_noise(psnr)
-    if isinstance(operator, str):
-        D = get_D(operator, s.dim)
-    else:
-        D = operator
+    op_l2 = get_L2_operator(s.dim, operator_l2)
 
     loss_x = {}
     loss_x1 = {}
     loss_x2 = {}
     for l in lambdas:
         for t in thetas:
-            name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator.__str__()}"
-            loss_x[name], loss_x1[name], loss_x2[name] = test(s, l * t, l * (1 - t), D, name)
+            name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+            x1, x2 = test(s, l * t, l * (1 - t), op_l2)
+            plot_4(s.sparse, s.smooth, x1, x2, name)
+            loss_x[name] = nmse(s.x, x1 + x2)
+            loss_x1[name] = nmse(s.sparse, x1)
+            loss_x2[name] = nmse(s.smooth, x2)
 
     print_best(loss_x, loss_x1, loss_x2)
     s.show()
 
 
+def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
+                operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    s.gaussian_noise(psnr)
+    op_l2 = get_L2_operator(s.dim, operator_l2)
+
+    loss_x1 = []
+    loss_x2 = []
+    thetas = np.linspace(theta_min, theta_max, nb)
+    for t in thetas:
+        x1, x2 = test(s, lambda_ * t, lambda_ * (1 - t), op_l2)
+        loss_x1.append(nmse(s.sparse, x1))
+        loss_x2.append(nmse(s.smooth, x2))
+
+    name = f"λ:{lambda_:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+    print(f"Min L1 loss: {thetas[np.argmin(loss_x1)]}")
+    print(f"Min L2 loss: {thetas[np.argmin(loss_x2)]}")
+    plot_loss(thetas, loss_x1, loss_x2, name, "θ")
+
+    t = thetas[np.argmin(loss_x2)]
+    name = f"λ:{lambda_:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+    x1, x2 = test(s, lambda_ * t, lambda_ * (1 - t), op_l2)
+    plot_4(s.sparse, s.smooth, x1, x2, name)
+    s.show()
+
+
+def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
+                 operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    s.gaussian_noise(psnr)
+    op_l2 = get_L2_operator(s.dim, operator_l2)
+
+    loss_x1 = []
+    loss_x2 = []
+    lambdas = np.linspace(lambda_min, lambda_max, nb)
+    for l in lambdas:
+        x1, x2 = test(s, l * theta, l * (1 - theta), op_l2)
+        loss_x1.append(nmse(s.sparse, x1))
+        loss_x2.append(nmse(s.smooth, x2))
+
+    name = f"θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+    print(f"Min L1 loss: {lambdas[np.argmin(loss_x1)]}")
+    print(f"Min L2 loss: {lambdas[np.argmin(loss_x2)]}")
+    plot_loss(lambdas, loss_x1, loss_x2, name, "λ")
+
+    l = lambdas[np.argmin(loss_x1)]
+    name = f"λ:{l:.2f}, θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+    x1, x2 = test(s, l * theta, l * (1 - theta), op_l2)
+    plot_4(s.sparse, s.smooth, x1, x2, name)
+    s.show()
+
+
 if __name__ == '__main__':
-    d = (128, 128)
+    d = (64, 64)
     seed = 11
     s1 = SparseSmoothSignal(d)
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
-    # L = 0.5
-    #
+    # test_thetas(s1, 0.005, 0.8, 25, 0.4, 0.2, "L", 40.)
+    # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
+
+    # L = 0.05
+    # random_points(d, int(L * s1.dim[0] * s1.dim[1]))
     # lines = random_lines(s1.dim, int(L * s1.dim[0] * s1.dim[1]))
     #
     # fig, axes = plt.subplots(1, 2)
@@ -231,11 +317,10 @@ if __name__ == '__main__':
     # s1.H = o
     # axes[1].hist(o.rand_lines, bins=30)
     # plt.show()
-    #
 
-    test_lambda(s1, 0.25, [0.1], [0.1], "D")
+    # test_lambda_thetas(s1, 0.25, [0.2], [0.1, 0.6], "L")
 
-    # s1.H = MyMatrixFreeOperator(dim, int(0.2 * dim[0] * dim[1]))
-    # test_solvers(s1, 0.1*0.1, 0.1*0.9, "D")
+    # s1.H = MyMatrixFreeOperator(d, int(0.2 * d[0] * d[1]))
+    # test_solvers(s1, 0.1 * 0.1, 0.1 * 0.9, "L")
 
-    # test_hyperparameters(s1, [0.35], [0.1], [0.05], [None, "D", "D2"], [50.0])
+    test_hyperparameters(s1, [0.2, 0.3, 0.4], [0.1], [0.1], ["L"], [30.0])

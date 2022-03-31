@@ -16,7 +16,7 @@ class SparseSmoothSolver(Solver):
     with 2 regularization term, L1 and L2.
     """
 
-    def __init__(self, y: np.ndarray, operator: LinearOperator, lambda1: float = 0.1, lambda2: float = 0.1,
+    def __init__(self, y: np.ndarray, operator: LinearOperator, lambda1: float = 0.01, lambda2: float = 0.1,
                  l2operator: None | LinearOperator = None) -> None:
         """
         Parameters
