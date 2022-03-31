@@ -21,9 +21,9 @@ def nmse(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
 def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) -> LinearOperator:
     if isinstance(op_l2, str):
         if op_l2 == "D":
-            op = Gradient(dim, edge=True, kind='forward')
+            op = Gradient(dim, kind='forward')
         elif op_l2 == "L":
-            op = Laplacian(dim, edge=True)
+            op = Laplacian(dim)
         op.compute_lipschitz_cst(tol=1e-3)
         return op
     else:
@@ -245,6 +245,33 @@ def test_lambda_thetas(s: SparseSmoothSignal, L: float, lambdas: List[float], th
     s.show()
 
 
+def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: float, nb: int, lambda_: float,
+                                 theta: float, operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+    op_l2 = get_L2_operator(s.dim, operator_l2)
+    s.psnr = psnr
+
+    loss_x1 = []
+    loss_x2 = []
+    measurements = np.linspace(L_min, L_max, nb)
+    for l in measurements:
+        s.H = get_MyMatrixFreeOperator(s.dim, l)
+        x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
+        loss_x1.append(nmse(s.sparse, x1))
+        loss_x2.append(nmse(s.smooth, x2))
+
+    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+    print(f"Min L1 loss: {measurements[np.argmin(loss_x1)]}")
+    print(f"Min L2 loss: {measurements[np.argmin(loss_x2)]}")
+    plot_loss(measurements * 100, loss_x1, loss_x2, name, "Numbers of measurements")
+
+    L = measurements[np.argmin(loss_x2)]
+    s.H = get_MyMatrixFreeOperator(s.dim, l)
+    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
+    x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
+    plot_4(s.sparse, s.smooth, x1, x2, name)
+    s.show()
+
+
 def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
                 operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
     s.H = get_MyMatrixFreeOperator(s.dim, L)
@@ -304,6 +331,7 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
+    # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "L", 40.)
     # test_thetas(s1, 0.005, 0.8, 25, 0.4, 0.2, "L", 40.)
     # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
 

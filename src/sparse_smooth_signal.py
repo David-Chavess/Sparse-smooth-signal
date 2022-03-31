@@ -40,9 +40,9 @@ class SparseSmoothSignal:
             Linear operator used for measurements.
             If None there is no operator.
             If int the operator is taken as measurement_operator number of lines of the 2d DFT created by
-            create_measurement_operator, with -1 we take all lines.
+            create_measurement_operator(), with -1 we take all lines.
         psnr : float
-            peak signal-to-noise ratio of the gaussian white noise added, 50. by default.
+            Peak signal-to-noise ratio of the gaussian white noise added, 50. by default.
         """
         assert dim[0] >= 0 and dim[1] >= 0, "Negative dimension is not valid"
 
@@ -190,6 +190,17 @@ class SparseSmoothSignal:
         self.__noise = value.ravel()
         # delete deprecated cached values
         self.__y = None
+
+    @property
+    def psnr(self) -> float:
+        """Peak signal-to-noise ratio of the gaussian white noise added"""
+        return self.__psnr
+
+    @psnr.setter
+    def psnr(self, value: float) -> None:
+        self.__psnr = value
+        # delete deprecated cached values
+        self.__noise = None
 
     def random_sparse(self, seed: None | int = None) -> None:
         """
