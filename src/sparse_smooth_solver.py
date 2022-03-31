@@ -50,10 +50,10 @@ class SparseSmoothSolver(Solver):
         F = l22_loss * stack
 
         if self.lambda2 != 0.0:
-            L = self.lambda2 * SquaredL2Norm(H.shape[1])
-
             if isinstance(self.l2operator, LinearOperator):
-                L = L * self.l2operator
+                L = self.lambda2 * SquaredL2Norm(self.l2operator.shape[0]) * self.l2operator
+            else:
+                L = self.lambda2 * SquaredL2Norm(H.shape[1])
 
             F = F + DiffFuncHStack(NullDifferentiableFunctional(H.shape[1]), L, n_jobs=-1)
 

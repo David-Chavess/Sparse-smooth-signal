@@ -5,7 +5,7 @@ from typing import List, Tuple
 import numpy as np
 from matplotlib import pyplot as plt
 from pycsou.core import LinearOperator
-from pycsou.linop import FirstDerivative, SecondDerivative
+from pycsou.linop import Gradient
 
 from src.lasso_solver import LassoSolver
 from src.solver import MyMatrixFreeOperator
@@ -14,18 +14,17 @@ from src.sparse_smooth_solver import SparseSmoothSolver
 from src.tikhonov_solver import TikhonovSolver
 
 
-def loss(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
-    return np.sum((x1 - x2) ** 2)
+def nmse(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+    return np.sqrt(np.mean((x1 - x2) ** 2) / np.mean(x1 ** 2))
 
 
 def get_D(D: str, shape: Tuple[int, int]) -> LinearOperator:
-    size = shape[0] * shape[1]
+    grad = Gradient(shape, kind='forward')
+    grad.compute_lipschitz_cst(tol=1e-3)
     if D == "D":
-        op = (FirstDerivative(size, shape=shape, axis=0) + FirstDerivative(size, shape=shape, axis=1)) / 2
-        op.compute_lipschitz_cst(tol=1e-3)
-    elif D == "D2":
-        op = (SecondDerivative(size, shape=shape, axis=0) + SecondDerivative(size, shape=shape, axis=1)) / 2
-        op.compute_lipschitz_cst(tol=1e-3)
+        op = grad
+    # elif D == "D2":
+    # TODO
     return op
 
 
@@ -39,6 +38,38 @@ def print_best(loss_x, loss_x1, loss_x2) -> None:
     print("Smooth:")
     for x in sorted(loss_x2, key=loss_x2.get):
         print(f"{x} : {loss_x2[x]}")
+
+
+def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
+    points = set()
+
+    while len(points) < size:
+        # 2d Gaussian
+        p = np.abs(np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], size - len(points)))
+        p /= np.max(p)
+
+        # Cast to index
+        p[:, 0] *= dim[0] - 1
+        p[:, 1] *= dim[1] - 1
+
+        # Add to set as int types
+        s = set(map(tuple, p.astype((int, int))))
+        points.update(s)
+        # We don't want to point (0, 0)
+        points.discard((0, 0))
+
+    # Plot distribution of points
+    # v = np.array(sorted(list(points)))
+    # plt.scatter(*zip(*v))
+    # plt.show()
+
+    return np.array(list(points))
+
+
+def random_lines(dim: Tuple[int, int], size: int) -> np.ndarray:
+    points = random_points(dim, size)
+    index = points[:, 0] + points[:, 1] * dim[0]
+    return index
 
 
 def plot_3(x: np.ndarray, x_tik: np.ndarray, x_lasso: np.ndarray, name: str = "") -> None:
@@ -104,31 +135,36 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator,
 
     plot_4(s.sparse, s.smooth, x1, x2, name)
 
-    return loss(s.x, x), loss(s.sparse, x1), loss(s.smooth, x2)
+    return nmse(s.x, x), nmse(s.sparse, x1), nmse(s.smooth, x2)
 
 
-def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, op: None | str | LinearOperator = None):
+def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, operator: None | str | LinearOperator = None):
+    if isinstance(operator, str):
+        D = get_D(operator, s.dim)
+    else:
+        D = operator
+
     m = np.max(np.abs(s.H.adjoint(s.y)))
     l1 = lambda1 * m
     l2 = lambda2 * m
 
-    sol = SparseSmoothSolver(s.y, s.H, l1, l2, op)
+    sol = SparseSmoothSolver(s.y, s.H, l1, l2, D)
     x_ss = sol.solve()
-    x_ss = (x_ss[0]+x_ss[1]).reshape(dim)
+    x_ss = (x_ss[0] + x_ss[1]).reshape(s.dim)
 
     sol = TikhonovSolver(s.y, s.H, l2)
     _, x_tik = sol.solve()
-    x_tik = x_tik.reshape(dim)
+    x_tik = x_tik.reshape(s.dim)
 
     sol = LassoSolver(s.y, s.H, l1)
     x_lasso, _ = sol.solve()
-    x_lasso = x_lasso.reshape(dim)
+    x_lasso = x_lasso.reshape(s.dim)
 
     plot_3(x_ss, x_tik, x_lasso)
 
-    print(f"Sparse + Smooth loss : {loss(s.x, x_ss)}")
-    print(f"Tikhonov loss : {loss(s.x, x_tik)}")
-    print(f"Lasso loss : {loss(s.x, x_lasso)}")
+    print(f"Sparse + Smooth loss : {nmse(s.x, x_ss)}")
+    print(f"Tikhonov loss : {nmse(s.x, x_tik)}")
+    print(f"Lasso loss : {nmse(s.x, x_lasso)}")
     s.show()
 
 
@@ -159,7 +195,7 @@ def test_hyperparameters(s: SparseSmoothSignal, H: List[float], lambdas: List[fl
 def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: List[float],
                 operator: None | str | LinearOperator = None, psnr: float = 50.):
 
-    s.H = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
+    s.H = MyMatrixFreeOperator(s.dim, random_lines(s.dim, int(L * s.dim[0] * s.dim[1])))
     s.gaussian_noise(psnr)
     if isinstance(operator, str):
         D = get_D(operator, s.dim)
@@ -179,15 +215,27 @@ def test_lambda(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: L
 
 
 if __name__ == '__main__':
-    dim = (128, 128)
+    d = (128, 128)
     seed = 11
-    s1 = SparseSmoothSignal(dim)
+    s1 = SparseSmoothSignal(d)
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
-    # test_lambda(s1, 0.5, [0.1], [0.1], "D")
-    # s1.H = MyMatrixFreeOperator(shape, int(0.5 * shape[0] * shape[1]))
-    # s1.plot()
-    # test_solvers(s1, 0.2*0.1, 0.2*0.9, "D")
+    # L = 0.5
+    #
+    # lines = random_lines(s1.dim, int(L * s1.dim[0] * s1.dim[1]))
+    #
+    # fig, axes = plt.subplots(1, 2)
+    # axes[0].hist(lines, bins=30)
+    # o = MyMatrixFreeOperator(s1.dim, int(L * s1.dim[0] * s1.dim[1]))
+    # s1.H = o
+    # axes[1].hist(o.rand_lines, bins=30)
+    # plt.show()
+    #
 
-    # test_hyperparameters(s1, [0.5, 0.75, 1], [0.1], [0.1], [None, "D", "D2"], [50.0])
+    test_lambda(s1, 0.25, [0.1], [0.1], "D")
+
+    # s1.H = MyMatrixFreeOperator(dim, int(0.2 * dim[0] * dim[1]))
+    # test_solvers(s1, 0.1*0.1, 0.1*0.9, "D")
+
+    # test_hyperparameters(s1, [0.35], [0.1], [0.05], [None, "D", "D2"], [50.0])
