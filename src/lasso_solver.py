@@ -34,7 +34,6 @@ class LassoSolver(Solver):
     def solve(self) -> (np.ndarray, np.ndarray):
 
         H = self.operator
-        H.compute_lipschitz_cst()
 
         l22_loss = (1 / 2) * SquaredL2Loss(H.shape[0], self.y)
         F = l22_loss * H

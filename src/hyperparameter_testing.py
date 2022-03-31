@@ -172,7 +172,8 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator)
     return x1, x2
 
 
-def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float, operator_l2: None | str | LinearOperator = None):
+def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
+                 operator_l2: None | str | LinearOperator = None):
     op = get_L2_operator(s.dim, operator_l2)
 
     m = np.max(np.abs(s.H.adjoint(s.y)))
@@ -324,6 +325,33 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
     s.show()
 
 
+def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
+               operator_l2: None | str | LinearOperator = None):
+    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    op_l2 = get_L2_operator(s.dim, operator_l2)
+
+    loss_x1 = []
+    loss_x2 = []
+    psnrs = np.linspace(psnr_min, psnr_max, nb)
+    for p in psnrs:
+        s.gaussian_noise(p)
+        x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
+        loss_x1.append(nmse(s.sparse, x1))
+        loss_x2.append(nmse(s.smooth, x2))
+
+    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, l2 operator:{operator_l2.__str__()}"
+    print(f"Min L1 loss: {psnrs [np.argmin(loss_x1)]}")
+    print(f"Min L2 loss: {psnrs [np.argmin(loss_x2)]}")
+    plot_loss(psnrs, loss_x1, loss_x2, name, "PSNR")
+
+    p = psnrs[np.argmin(loss_x1)]
+    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, PSNR:{p:.0f}, l2 operator:{operator_l2.__str__()}"
+    s.gaussian_noise(p)
+    x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
+    plot_4(s.sparse, s.smooth, x1, x2, name)
+    s.show()
+
+
 if __name__ == '__main__':
     d = (64, 64)
     seed = 11
@@ -334,6 +362,7 @@ if __name__ == '__main__':
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "L", 40.)
     # test_thetas(s1, 0.005, 0.8, 25, 0.4, 0.2, "L", 40.)
     # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
+    # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "L")
 
     # L = 0.05
     # random_points(d, int(L * s1.dim[0] * s1.dim[1]))
@@ -351,4 +380,4 @@ if __name__ == '__main__':
     # s1.H = MyMatrixFreeOperator(d, int(0.2 * d[0] * d[1]))
     # test_solvers(s1, 0.1 * 0.1, 0.1 * 0.9, "L")
 
-    test_hyperparameters(s1, [0.2, 0.3, 0.4], [0.1], [0.1], ["L"], [30.0])
+    # test_hyperparameters(s1, [0.2, 0.3, 0.4], [0.1], [0.1], ["L"], [30.0])
