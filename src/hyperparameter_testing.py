@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from pycsou.core import LinearOperator
 from pycsou.linop import Gradient, Laplacian
+from scipy.stats import wasserstein_distance
 
 from src.lasso_solver import LassoSolver
 from src.solver import MyMatrixFreeOperator
@@ -14,8 +15,12 @@ from src.sparse_smooth_solver import SparseSmoothSolver
 from src.tikhonov_solver import TikhonovSolver
 
 
-def nmse(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+def nmse(x1: np.ndarray, x2: np.ndarray) -> float:
     return np.sqrt(np.mean((x1 - x2) ** 2) / np.mean(x1 ** 2))
+
+
+def Wasserstein_distance(x1: np.ndarray, x2: np.ndarray) -> float:
+    return wasserstein_distance(x1.ravel(), x2.ravel())
 
 
 def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) -> LinearOperator:
@@ -143,7 +148,7 @@ def plot_loss(x, loss_x1, loss_x2, name: str = "", var: str = ""):
 
     ax1.plot(x, loss_x1)
     ax1.set_xlabel(var)
-    ax1.set_ylabel("NMSE")
+    ax1.set_ylabel("Wasserstein_distance")
     ax1.set_title("L1 loss")
 
     ax2.plot(x, loss_x2)
@@ -166,6 +171,8 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator)
     print(f"x2 nb min: {(x2 < 0).sum()}")
 
     x2 += off_set_smooth(s.smooth, x2)
+
+    x1[x1 < 0] = 0
 
     print(f"x2 min: {np.min(x2)}")
     print(f"x2 max: {np.max(x2)}")
@@ -217,7 +224,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[fl
                         x1, x2 = test(s, l * t, l * (1 - t), op_l2)
                         plot_4(s.sparse, s.smooth, x1, x2, name)
                         loss_x[name] = nmse(s.x, x1 + x2)
-                        loss_x1[name] = nmse(s.sparse, x1)
+                        loss_x1[name] = Wasserstein_distance(s.sparse, x1)
                         loss_x2[name] = nmse(s.smooth, x2)
 
     print_best(loss_x, loss_x1, loss_x2)
@@ -239,7 +246,7 @@ def test_lambda_thetas(s: SparseSmoothSignal, L: float, lambdas: List[float], th
             x1, x2 = test(s, l * t, l * (1 - t), op_l2)
             plot_4(s.sparse, s.smooth, x1, x2, name)
             loss_x[name] = nmse(s.x, x1 + x2)
-            loss_x1[name] = nmse(s.sparse, x1)
+            loss_x1[name] = Wasserstein_distance(s.sparse, x1)
             loss_x2[name] = nmse(s.smooth, x2)
 
     print_best(loss_x, loss_x1, loss_x2)
@@ -257,7 +264,7 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
     for l in measurements:
         s.H = get_MyMatrixFreeOperator(s.dim, l)
         x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-        loss_x1.append(nmse(s.sparse, x1))
+        loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
@@ -284,7 +291,7 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
     thetas = np.linspace(theta_min, theta_max, nb)
     for t in thetas:
         x1, x2 = test(s, lambda_ * t, lambda_ * (1 - t), op_l2)
-        loss_x1.append(nmse(s.sparse, x1))
+        loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
@@ -310,7 +317,7 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
     lambdas = np.linspace(lambda_min, lambda_max, nb)
     for l in lambdas:
         x1, x2 = test(s, l * theta, l * (1 - theta), op_l2)
-        loss_x1.append(nmse(s.sparse, x1))
+        loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
@@ -336,7 +343,7 @@ def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int,
     for p in psnrs:
         s.gaussian_noise(p)
         x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-        loss_x1.append(nmse(s.sparse, x1))
+        loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, l2 operator:{operator_l2.__str__()}"
@@ -356,11 +363,14 @@ if __name__ == '__main__':
     d = (64, 64)
     seed = 11
     s1 = SparseSmoothSignal(d)
+    sp = s1.sparse
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
+    # print(Wasserstein_distance(sp.ravel(), sp.ravel()))
+
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "L", 40.)
-    # test_thetas(s1, 0.005, 0.8, 25, 0.4, 0.2, "L", 40.)
+    test_thetas(s1, 0.005, 0.8, 10, 0.4, 0.2, "L", 40.)
     # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
     # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "L")
 
