@@ -231,28 +231,6 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[fl
     s.show()
 
 
-def test_lambda_thetas(s: SparseSmoothSignal, L: float, lambdas: List[float], thetas: List[float],
-                       operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
-    s.H = get_MyMatrixFreeOperator(s.dim, L)
-    s.gaussian_noise(psnr)
-    op_l2 = get_L2_operator(s.dim, operator_l2)
-
-    loss_x = {}
-    loss_x1 = {}
-    loss_x2 = {}
-    for l in lambdas:
-        for t in thetas:
-            name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-            x1, x2 = test(s, l * t, l * (1 - t), op_l2)
-            plot_4(s.sparse, s.smooth, x1, x2, name)
-            loss_x[name] = nmse(s.x, x1 + x2)
-            loss_x1[name] = Wasserstein_distance(s.sparse, x1)
-            loss_x2[name] = nmse(s.smooth, x2)
-
-    print_best(loss_x, loss_x1, loss_x2)
-    s.show()
-
-
 def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: float, nb: int, lambda_: float,
                                  theta: float, operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
     op_l2 = get_L2_operator(s.dim, operator_l2)
@@ -384,8 +362,6 @@ if __name__ == '__main__':
     # s1.H = o
     # axes[1].hist(o.rand_lines, bins=30)
     # plt.show()
-
-    # test_lambda_thetas(s1, 0.25, [0.2], [0.1, 0.6], "L")
 
     # s1.H = MyMatrixFreeOperator(d, int(0.2 * d[0] * d[1]))
     # test_solvers(s1, 0.1 * 0.1, 0.1 * 0.9, "L")
