@@ -250,13 +250,6 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
     print(f"Best value L2: {measurements[np.argmin(loss_x2)]}")
     plot_loss(measurements * 100, loss_x1, loss_x2, name, "Numbers of measurements")
 
-    L = measurements[np.argmin(loss_x2)]
-    s.H = get_MyMatrixFreeOperator(s.dim, l)
-    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-    x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-    plot_4(s.sparse, s.smooth, x1, x2, name)
-    s.show()
-
 
 def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
                 operator_l2: None | str | LinearOperator = 'L', psnr: float = 50.):
@@ -328,13 +321,6 @@ def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int,
     print(f"Best value L1: {psnrs [np.argmin(loss_x1)]}")
     print(f"Best value L2: {psnrs [np.argmin(loss_x2)]}")
     plot_loss(psnrs, loss_x1, loss_x2, name, "PSNR")
-
-    p = psnrs[np.argmin(loss_x1)]
-    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, PSNR:{p:.0f}, l2 operator:{operator_l2.__str__()}"
-    s.gaussian_noise(p)
-    x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-    plot_4(s.sparse, s.smooth, x1, x2, name)
-    s.show()
 
 
 if __name__ == '__main__':
