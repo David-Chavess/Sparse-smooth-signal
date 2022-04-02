@@ -165,22 +165,22 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator)
     x1 = x1.reshape(s.dim)
     x2 = x2.reshape(s.dim)
 
-    print(f"x1 min: {np.min(x1)}")
-    print(f"x2 min: {np.min(x2)}")
-    print(f"x1 nb min: {(x1 < 0).sum()}")
-    print(f"x2 nb min: {(x2 < 0).sum()}")
+    # print(f"x1 min: {np.min(x1)}")
+    # print(f"x2 min: {np.min(x2)}")
+    # print(f"x1 nb min: {(x1 < 0).sum()}")
+    # print(f"x2 nb min: {(x2 < 0).sum()}")
 
     x2 += off_set_smooth(s.smooth, x2)
 
     x1[x1 < 0] = 0
 
-    print(f"x2 min: {np.min(x2)}")
-    print(f"x2 max: {np.max(x2)}")
+    # print(f"x2 min: {np.min(x2)}")
+    # print(f"x2 max: {np.max(x2)}")
     return x1, x2
 
 
 def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
-                 operator_l2: None | str | LinearOperator = None):
+                 operator_l2: None | str | LinearOperator = 'L'):
     op = get_L2_operator(s.dim, operator_l2)
 
     m = np.max(np.abs(s.H.adjoint(s.y)))
@@ -232,7 +232,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[fl
 
 
 def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: float, nb: int, lambda_: float,
-                                 theta: float, operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+                                 theta: float, operator_l2: None | str | LinearOperator = 'L', psnr: float = 50.):
     op_l2 = get_L2_operator(s.dim, operator_l2)
     s.psnr = psnr
 
@@ -246,8 +246,8 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-    print(f"Min L1 loss: {measurements[np.argmin(loss_x1)]}")
-    print(f"Min L2 loss: {measurements[np.argmin(loss_x2)]}")
+    print(f"Best value L1: {measurements[np.argmin(loss_x1)]}")
+    print(f"Best value L2: {measurements[np.argmin(loss_x2)]}")
     plot_loss(measurements * 100, loss_x1, loss_x2, name, "Numbers of measurements")
 
     L = measurements[np.argmin(loss_x2)]
@@ -259,7 +259,7 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
 
 
 def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
-                operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+                operator_l2: None | str | LinearOperator = 'L', psnr: float = 50.):
     s.H = get_MyMatrixFreeOperator(s.dim, L)
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
@@ -273,8 +273,8 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-    print(f"Min L1 loss: {thetas[np.argmin(loss_x1)]}")
-    print(f"Min L2 loss: {thetas[np.argmin(loss_x2)]}")
+    print(f"Best value L1: {thetas[np.argmin(loss_x1)]}")
+    print(f"Best value L2: {thetas[np.argmin(loss_x2)]}")
     plot_loss(thetas, loss_x1, loss_x2, name, "θ")
 
     t = thetas[np.argmin(loss_x2)]
@@ -285,7 +285,7 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
 
 
 def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
-                 operator_l2: None | str | LinearOperator = None, psnr: float = 50.):
+                 operator_l2: None | str | LinearOperator = 'L', psnr: float = 50.):
     s.H = get_MyMatrixFreeOperator(s.dim, L)
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
@@ -299,8 +299,8 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-    print(f"Min L1 loss: {lambdas[np.argmin(loss_x1)]}")
-    print(f"Min L2 loss: {lambdas[np.argmin(loss_x2)]}")
+    print(f"Best value L1: {lambdas[np.argmin(loss_x1)]}")
+    print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
     plot_loss(lambdas, loss_x1, loss_x2, name, "λ")
 
     l = lambdas[np.argmin(loss_x1)]
@@ -311,7 +311,7 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
 
 
 def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
-               operator_l2: None | str | LinearOperator = None):
+               operator_l2: None | str | LinearOperator = 'L'):
     s.H = get_MyMatrixFreeOperator(s.dim, L)
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
@@ -325,8 +325,8 @@ def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int,
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, l2 operator:{operator_l2.__str__()}"
-    print(f"Min L1 loss: {psnrs [np.argmin(loss_x1)]}")
-    print(f"Min L2 loss: {psnrs [np.argmin(loss_x2)]}")
+    print(f"Best value L1: {psnrs [np.argmin(loss_x1)]}")
+    print(f"Best value L2: {psnrs [np.argmin(loss_x2)]}")
     plot_loss(psnrs, loss_x1, loss_x2, name, "PSNR")
 
     p = psnrs[np.argmin(loss_x1)]
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     # print(Wasserstein_distance(sp.ravel(), sp.ravel()))
 
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "L", 40.)
-    test_thetas(s1, 0.005, 0.8, 10, 0.4, 0.2, "L", 40.)
+    # test_thetas(s1, 0.005, 0.8, 10, 0.4, 0.2, "L", 40.)
     # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
     # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "L")
 

@@ -62,7 +62,7 @@ class SparseSmoothSolver(Solver):
         else:
             G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]), n_jobs=-1)
 
-        apgd = APGD(2 * self.operator.shape[1], F=F, G=G, acceleration='CD', verbose=1)
+        apgd = APGD(2 * self.operator.shape[1], F=F, G=G, acceleration='CD', verbose=None)
         estimate, converged, diagnostics = apgd.iterate()
         x = estimate['iterand']
         x1 = x[:self.operator.shape[1]]
