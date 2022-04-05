@@ -29,6 +29,8 @@ def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) ->
             op = Gradient(dim, kind='forward')
         elif op_l2 == "L":
             op = Laplacian(dim)
+        else:
+            raise ValueError("Operator name is invalid")
         op.compute_lipschitz_cst(tol=1e-3)
         return op
     else:
@@ -327,18 +329,15 @@ if __name__ == '__main__':
     d = (64, 64)
     seed = 11
     s1 = SparseSmoothSignal(d)
-    sp = s1.sparse
     s1.random_sparse(seed)
     s1.random_smooth(seed)
-
-    # print(Wasserstein_distance(sp.ravel(), sp.ravel()))
 
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "L", 40.)
     # test_thetas(s1, 0.005, 0.8, 10, 0.4, 0.2, "L", 40.)
     # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
     # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "L")
 
-    # L = 0.05
+    # L = 0.25
     # random_points(d, int(L * s1.dim[0] * s1.dim[1]))
     # lines = random_lines(s1.dim, int(L * s1.dim[0] * s1.dim[1]))
     #
@@ -352,4 +351,4 @@ if __name__ == '__main__':
     # s1.H = MyMatrixFreeOperator(d, int(0.2 * d[0] * d[1]))
     # test_solvers(s1, 0.1 * 0.1, 0.1 * 0.9, "L")
 
-    # test_hyperparameters(s1, [0.2, 0.3, 0.4], [0.1], [0.1], ["L"], [30.0])
+    # test_hyperparameters(s1, [0.25], [0.1, 0.2, 0.3], [0.1, 0.3, 0.5], ["L"], [30.0])
