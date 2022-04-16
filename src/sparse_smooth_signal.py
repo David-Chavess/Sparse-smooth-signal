@@ -212,11 +212,11 @@ class SparseSmoothSignal:
             seed used for the random generator
         """
         if seed is None:
-            rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005)
+            rand_matrix = 4 * sp.rand(self.__dim[0] - 2, self.__dim[1] - 2, density=0.005)
         else:
-            rand_matrix = 4 * sp.rand(self.__dim[0], self.__dim[1], density=0.005, random_state=seed)
+            rand_matrix = 4 * sp.rand(self.__dim[0] - 2, self.__dim[1] - 2, density=0.005, random_state=seed)
         rand_matrix.data += 2
-        self.sparse = rand_matrix.toarray()
+        self.sparse = np.pad(rand_matrix.toarray(), ((1, 1), (1, 1)), mode='constant', constant_values=0)
 
     def random_smooth(self, seed: None | int = None) -> None:
         """
@@ -236,13 +236,13 @@ class SparseSmoothSignal:
             rng = np.random.default_rng(seed)
 
         # grid
-        x = np.linspace(-1, 1, self.__dim[0])
-        y = np.linspace(-1, 1, self.__dim[1])
+        x = np.linspace(-1, 1, self.__dim[0] - 2)
+        y = np.linspace(-1, 1, self.__dim[1] - 2)
         x, y = np.meshgrid(x, y)
         samples1 = np.stack((x.flatten(), y.flatten()), axis=-1)
 
         # random gaussian's centers
-        samples2 = np.stack((2 * rng.random(size=nb) - 1, 2 * rng.random(size=nb) - 1), axis=-1)
+        samples2 = np.stack((0.75 * (2 * rng.random(size=nb) - 1), 0.75 * (2 * rng.random(size=nb) - 1)), axis=-1)
 
         sigma = 1 / 5
         # used to reduce computation time
@@ -253,7 +253,8 @@ class SparseSmoothSignal:
                                      operator_type='dask')
         alpha = np.ones(samples2.shape[0])
         m = MDMOp * alpha
-        self.smooth = (m / np.max(m)).reshape(self.__dim[0], self.__dim[1])
+        smooth = (m / np.max(m)).reshape(self.__dim[0] - 2, self.__dim[1] - 2)
+        self.smooth = np.pad(smooth, ((1, 1), (1, 1)), mode='constant', constant_values=0)
 
     def random_measurement_operator(self, size: int = -1) -> None:
         """
