@@ -20,7 +20,7 @@ def nmse(x1: np.ndarray, x2: np.ndarray) -> float:
 
 
 def Wasserstein_distance(x1: np.ndarray, x2: np.ndarray) -> float:
-    return wasserstein_distance(x1.ravel(), x2.ravel())
+    return wasserstein_distance(x1.ravel() / np.sum(x1), x2.ravel() / np.sum(x2))
 
 
 def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) -> LinearOperator:
@@ -174,7 +174,7 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator)
 
     x2 += off_set_smooth(s.smooth, x2)
 
-    x1[x1 < 0] = 0
+    x1[x1 < 0.75] = 0
 
     # print(f"x2 min: {np.min(x2)}")
     # print(f"x2 max: {np.max(x2)}")
@@ -206,7 +206,6 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
     print(f"Sparse + Smooth loss : {nmse(s.x, x_ss)}")
     print(f"Tikhonov loss : {nmse(s.x, x_tik)}")
     print(f"Lasso loss : {nmse(s.x, x_lasso)}")
-    s.show()
 
 
 def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[float], thetas: List[float],
@@ -272,12 +271,6 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
     print(f"Best value L2: {thetas[np.argmin(loss_x2)]}")
     plot_loss(thetas, loss_x1, loss_x2, name, "θ")
 
-    t = thetas[np.argmin(loss_x2)]
-    name = f"λ:{lambda_:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-    x1, x2 = test(s, lambda_ * t, lambda_ * (1 - t), op_l2)
-    plot_4(s.sparse, s.smooth, x1, x2, name)
-    s.show()
-
 
 def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
                  operator_l2: None | str | LinearOperator = 'L', psnr: float = 50.):
@@ -298,12 +291,6 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
     print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
     plot_loss(lambdas, loss_x1, loss_x2, name, "λ")
 
-    l = lambdas[np.argmin(loss_x1)]
-    name = f"λ:{l:.2f}, θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, l2 operator:{operator_l2.__str__()}"
-    x1, x2 = test(s, l * theta, l * (1 - theta), op_l2)
-    plot_4(s.sparse, s.smooth, x1, x2, name)
-    s.show()
-
 
 def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
                operator_l2: None | str | LinearOperator = 'L'):
@@ -320,9 +307,41 @@ def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int,
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, l2 operator:{operator_l2.__str__()}"
-    print(f"Best value L1: {psnrs [np.argmin(loss_x1)]}")
-    print(f"Best value L2: {psnrs [np.argmin(loss_x2)]}")
+    print(f"Best value L1: {psnrs[np.argmin(loss_x1)]}")
+    print(f"Best value L2: {psnrs[np.argmin(loss_x2)]}")
     plot_loss(psnrs, loss_x1, loss_x2, name, "PSNR")
+
+
+def test_best_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: float, psnr: float,
+                    operator_l2: None | str | LinearOperator = 'L'):
+    s.H = MyMatrixFreeOperator(d)
+    s.psnr = psnr
+    y = np.abs(s.y)
+    y[0] = 0
+    best_lines = np.sort(np.argsort(y.ravel())[-int(L * d[0] * d[1]):])
+    s.H = MyMatrixFreeOperator(d, best_lines)
+    x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, operator_l2))
+    plot_4(s.sparse, s.smooth, x1, x2)
+
+    return x1, x2
+
+
+def picks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, threshold: float = 0.75):
+    sp1 = original_sparse.ravel()
+    sp2 = reconstructed_sparse.ravel()
+    picks = np.argwhere(sp1 >= 2)
+    found = np.sum(sp2[picks] > threshold)
+    print(f"Picks in the original image : {len(picks)}")
+    print(f"Picks found : {found}")
+    print(f"New picks found : {np.sum(sp2 > threshold) - found}")
+
+
+def picks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray):
+    sp1 = original_sparse.ravel()
+    sp2 = reconstructed_sparse.ravel()
+    picks = np.argwhere(sp1 >= 2)
+    intensity = sp2[picks] / sp1[picks]
+    print(f"Mean intensity of the reconstructed picks : {np.mean(intensity):.1%}")
 
 
 if __name__ == '__main__':
@@ -332,23 +351,17 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
 
+    # x1, x2 = test_best_lines(s1, 0.1, 0.3, 0.3, 30., "L")
+    # picks_found(s1.sparse, x1)
+    # picks_intensity(s1.sparse, x1)
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "L", 40.)
     # test_thetas(s1, 0.005, 0.8, 10, 0.4, 0.2, "L", 40.)
-    # test_lambdas(s1, 0.01, 0.5, 25, 0.4, 0.1, "L", 40.)
+    # test_lambdas(s1, 0.05, 0.5, 20, 0.1, 0.3, "L", 20.)
     # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "L")
-
-    # L = 0.25
-    # random_points(d, int(L * s1.dim[0] * s1.dim[1]))
-    # lines = random_lines(s1.dim, int(L * s1.dim[0] * s1.dim[1]))
-    #
-    # fig, axes = plt.subplots(1, 2)
-    # axes[0].hist(lines, bins=30)
-    # o = MyMatrixFreeOperator(s1.dim, int(L * s1.dim[0] * s1.dim[1]))
-    # s1.H = o
-    # axes[1].hist(o.rand_lines, bins=30)
-    # plt.show()
 
     # s1.H = MyMatrixFreeOperator(d, int(0.2 * d[0] * d[1]))
     # test_solvers(s1, 0.1 * 0.1, 0.1 * 0.9, "L")
 
-    # test_hyperparameters(s1, [0.25], [0.1, 0.2, 0.3], [0.1, 0.3, 0.5], ["L"], [30.0])
+    # test_hyperparameters(s1, [0.1], [0.1, 0.2, 0.3], [0.1, 0.2, 0.3], ["L"], [20.0])
+
+    plt.show()
