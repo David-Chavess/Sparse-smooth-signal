@@ -83,7 +83,6 @@ class SparseSmoothSignal:
                 self.__measurement_operator = self.create_measurement_operator(self.__dim)
                 self.random_measurement_operator(measurement_operator)
 
-
     @property
     def dim(self) -> Tuple[int, int]:
         """Tuple[int ,int]: Shape of the signal x"""
@@ -269,7 +268,7 @@ class SparseSmoothSignal:
         if size == -1:
             size = self.__size
 
-        rand = np.sort(np.random.choice(self.__size, size, replace=False))
+        rand = np.sort(np.random.choice(np.arange(1, self.__size, dtype=int), size, replace=False))
         self.random_lines = rand
 
     def gaussian_noise(self, psnr: float) -> None:

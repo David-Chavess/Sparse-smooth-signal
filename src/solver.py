@@ -75,7 +75,7 @@ class MyMatrixFreeOperator(LinearOperator):
         if isinstance(lines, int) and lines != shape[0] * shape[1]:
             assert 0 < lines <= shape[0] * shape[1], "invalid numbers of lines"
             shape = (lines, size)
-            self.rand_lines = np.sort(np.random.choice(size, lines, replace=False))
+            self.rand_lines = np.sort(np.random.choice(np.arange(1, size, dtype=int), lines, replace=False))
         elif isinstance(lines, np.ndarray):
             shape = (lines.size, size)
             self.rand_lines = lines
