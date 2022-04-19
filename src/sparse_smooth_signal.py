@@ -316,7 +316,7 @@ class SparseSmoothSignal:
         im = ax3.imshow(self.sparse, vmin=0, vmax=6)
         fig.colorbar(im, ax=ax3, fraction=0.047, pad=0.01)
         ax3.axis('off')
-        ax3.set_title("Spare")
+        ax3.set_title("Sparse")
 
         fig.tight_layout()
 
