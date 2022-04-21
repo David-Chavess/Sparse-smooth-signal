@@ -434,10 +434,9 @@ def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int,
 
 
 def get_best_lines(s: SparseSmoothSignal, L: float):
-    s.H = MyMatrixFreeOperator(s.dim)
-    y = np.abs(s.y)
+    y = np.abs(np.fft.fft2(s.x)).ravel()
     y[0] = 0
-    return np.sort(np.argsort(y.ravel())[-int(L * d[0] * d[1]):])
+    return np.sort(np.argsort(y)[-int(L * d[0] * d[1]):])
 
 
 def test_best_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: float, psnr: float,
@@ -512,21 +511,21 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
     L = 0.1
-    l = 0.1
+    l = 0.2
     t = 0.15
     psnr = 50.
     s1.psnr = psnr
-    s1.H = MyMatrixFreeOperator(d, get_best_lines(s1, L))
+    s1.H = MyMatrixFreeOperator(d)
 
     # compare_choose_of_lines(s1, L, l, t, psnr, "Gradient")
     # compare_smoothing_operator(s1)
-    # x1, x2 = test_best_lines(s1, L, l, t, psnr, "Laplacian")
+    # x1, x2 = test_best_lines(s1, L, l, t, psnr, "Gradient")
     # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Laplacian"
     # plot_4(s1.sparse, s1.smooth, x1, x2, name)
-    # peaks_found(s1.sparse, x1, 2)
+    # peaks_found(s1.sparse, x1, 1)
     # peaks_intensity(s1.sparse, x1)
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "Laplacian", 40.)
-    test_thetas(s1, 0.05, 0.95, 50, L, l, "Laplacian", psnr)
+    # test_thetas(s1, 0.05, 0.95, 50, L, l, "Laplacian", psnr)
     # test_lambdas(s1, 0.05, 2, 50, L, t, "Laplacian", psnr)
     # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "Laplacian")
 
