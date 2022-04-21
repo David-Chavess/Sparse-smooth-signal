@@ -252,16 +252,16 @@ def plot_loss(x, loss_x1, loss_x2, name: str = "", var: str = ""):
     ax2.set_title("L2 loss")
 
 
-def plot_picks(x, nb_picks, pick_found, wrong_picks_found, var: str = ""):
+def plot_picks(x, nb_picks, pick_found, wrong_picks_found, threshold: float, var: str = ""):
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    fig.canvas.manager.set_window_title(f'Recovered pick comparison')
-    ax.set_title("Recovered pick comparison")
+    fig.canvas.manager.set_window_title(f'Recovered peak comparison')
+    ax.set_title(f"Recovered peak comparison, Threshold = {threshold}")
 
-    ax.semilogy(x, pick_found, label='Picks found')
-    ax.semilogy(x, wrong_picks_found, label='Wrong Picks found')
-    ax.axhline(y=nb_picks, label='number of picks', linestyle='--')
+    ax.semilogy(x, pick_found, label='Peaks found')
+    ax.semilogy(x, wrong_picks_found, label='Wrong Peaks found')
+    ax.axhline(y=nb_picks, label='number of peaks', linestyle='--')
     ax.set_xlabel(var)
-    ax.set_ylabel("Number of picks")
+    ax.set_ylabel("Number of peaks")
     ax.legend()
 
 
@@ -366,7 +366,7 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
 
 
 def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
-                operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.):
+                operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.):
     s.H = get_MyMatrixFreeOperator(s.dim, L)
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
@@ -379,18 +379,18 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
         x1, x2 = test_best_lines(s, L, lambda_, t, psnr, op_l2)
         loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
-        picks.append(picks_found(s.sparse, x1, 1))
+        picks.append(picks_found(s.sparse, x1, threshold))
 
     name = f"λ:{lambda_:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     print(f"Best value L1: {thetas[np.argmin(loss_x1)]}")
     print(f"Best value L2: {thetas[np.argmin(loss_x2)]}")
     plot_loss(thetas, loss_x1, loss_x2, name, "θ")
     picks = np.array(picks)
-    plot_picks(thetas, len(np.argwhere(s.sparse >= 2)), picks[:, 0], picks[:, 1], "θ")
+    plot_picks(thetas, len(np.argwhere(s.sparse >= 2)), picks[:, 0], picks[:, 1], threshold, "θ")
 
 
 def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
-                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.):
+                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.):
     s.H = get_MyMatrixFreeOperator(s.dim, L)
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
@@ -410,7 +410,7 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
     print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
     plot_loss(lambdas, loss_x1, loss_x2, name, "λ")
     picks = np.array(picks)
-    plot_picks(lambdas, len(np.argwhere(s.sparse >= 2)), picks[:, 0], picks[:, 1], "λ")
+    plot_picks(lambdas, len(np.argwhere(s.sparse >= 2)), picks[:, 0], picks[:, 1], threshold, "λ")
 
 
 def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
@@ -512,7 +512,7 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
     L = 0.1
-    l = 0.2
+    l = 0.1
     t = 0.15
     psnr = 50.
     s1.psnr = psnr
@@ -520,14 +520,14 @@ if __name__ == '__main__':
 
     # compare_choose_of_lines(s1, L, l, t, psnr, "Gradient")
     # compare_smoothing_operator(s1)
-    # x1, x2 = test_best_lines(s1, L, l, t, psnr, "Gradient")
-    # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Gradient"
+    # x1, x2 = test_best_lines(s1, L, l, t, psnr, "Laplacian")
+    # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Laplacian"
     # plot_4(s1.sparse, s1.smooth, x1, x2, name)
     # picks_found(s1.sparse, x1, 2)
     # picks_intensity(s1.sparse, x1)
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "Laplacian", 40.)
-    # test_thetas(s1, 0.05, 0.95, 50, L, l, "Gradient", psnr)
-    # test_lambdas(s1, 0.05, 2, 50, L, t, "Gradient", psnr)
+    test_thetas(s1, 0.05, 0.95, 50, L, l, "Laplacian", psnr)
+    # test_lambdas(s1, 0.05, 2, 50, L, t, "Laplacian", psnr)
     # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "Laplacian")
 
     # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Laplacian"
