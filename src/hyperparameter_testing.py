@@ -252,14 +252,14 @@ def plot_loss(x, loss_x1, loss_x2, name: str = "", var: str = ""):
     ax2.set_title("L2 loss")
 
 
-def plot_picks(x, nb_picks, pick_found, wrong_picks_found, threshold: float, var: str = ""):
+def plot_peaks(x, nb_peaks, peak_found, wrong_peaks_found, threshold: float, var: str = ""):
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
     fig.canvas.manager.set_window_title(f'Recovered peak comparison')
     ax.set_title(f"Recovered peak comparison, Threshold = {threshold}")
 
-    ax.semilogy(x, pick_found, label='Peaks found')
-    ax.semilogy(x, wrong_picks_found, label='Wrong Peaks found')
-    ax.axhline(y=nb_picks, label='number of peaks', linestyle='--')
+    ax.semilogy(x, peak_found, label='Peaks found')
+    ax.semilogy(x, wrong_peaks_found, label='Wrong Peaks found')
+    ax.axhline(y=nb_peaks, label='number of peaks', linestyle='--')
     ax.set_xlabel(var)
     ax.set_ylabel("Number of peaks")
     ax.legend()
@@ -309,14 +309,14 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
 
     plot_solvers(x_sparse + x_smooth, x_tik, x_tik_op, x_lasso, name)
 
-    picks_found(s.sparse, x_sparse, 1)
-    picks_intensity(s.sparse, x_sparse)
-    picks_found(s.sparse, x_tik, 1)
-    picks_intensity(s.sparse, x_tik)
-    picks_found(s.sparse, x_tik_op, 1)
-    picks_intensity(s.sparse, x_tik_op)
-    picks_found(s.sparse, x_lasso, 1)
-    picks_intensity(s.sparse, x_lasso)
+    peaks_found(s.sparse, x_sparse, 1)
+    peaks_intensity(s.sparse, x_sparse)
+    peaks_found(s.sparse, x_tik, 1)
+    peaks_intensity(s.sparse, x_tik)
+    peaks_found(s.sparse, x_tik_op, 1)
+    peaks_intensity(s.sparse, x_tik_op)
+    peaks_found(s.sparse, x_lasso, 1)
+    peaks_intensity(s.sparse, x_lasso)
     return x_sparse, x_smooth, x_tik, x_tik_op, x_lasso
 
 
@@ -373,20 +373,20 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
 
     loss_x1 = []
     loss_x2 = []
-    picks = []
+    peaks = []
     thetas = np.linspace(theta_min, theta_max, nb)
     for t in thetas:
         x1, x2 = test_best_lines(s, L, lambda_, t, psnr, op_l2)
         loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
-        picks.append(picks_found(s.sparse, x1, threshold))
+        peaks.append(peaks_found(s.sparse, x1, threshold))
 
     name = f"λ:{lambda_:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     print(f"Best value L1: {thetas[np.argmin(loss_x1)]}")
     print(f"Best value L2: {thetas[np.argmin(loss_x2)]}")
     plot_loss(thetas, loss_x1, loss_x2, name, "θ")
-    picks = np.array(picks)
-    plot_picks(thetas, len(np.argwhere(s.sparse >= 2)), picks[:, 0], picks[:, 1], threshold, "θ")
+    peaks = np.array(peaks)
+    plot_peaks(thetas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "θ")
 
 
 def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
@@ -397,20 +397,20 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
 
     loss_x1 = []
     loss_x2 = []
-    picks = []
+    peaks = []
     lambdas = np.linspace(lambda_min, lambda_max, nb)
     for l in lambdas:
         x1, x2 = test_best_lines(s, L, l, theta, psnr, op_l2)
         loss_x1.append(Wasserstein_distance(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
-        picks.append(picks_found(s.sparse, x1, 1))
+        peaks.append(peaks_found(s.sparse, x1, 1))
 
     name = f"θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     print(f"Best value L1: {lambdas[np.argmin(loss_x1)]}")
     print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
     plot_loss(lambdas, loss_x1, loss_x2, name, "λ")
-    picks = np.array(picks)
-    plot_picks(lambdas, len(np.argwhere(s.sparse >= 2)), picks[:, 0], picks[:, 1], threshold, "λ")
+    peaks = np.array(peaks)
+    plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "λ")
 
 
 def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
@@ -449,24 +449,24 @@ def test_best_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: floa
     return x1, x2
 
 
-def picks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, threshold: float = 0.75):
+def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, threshold: float = 0.75):
     sp1 = original_sparse.ravel()
     sp2 = reconstructed_sparse.ravel()
-    picks = np.argwhere(sp1 >= 2)
-    found = np.sum(sp2[picks] > threshold)
-    wrong_pick = np.sum(sp2 > threshold) - found
-    print(f"Picks in the original image : {len(picks)}")
+    peaks = np.argwhere(sp1 >= 2)
+    found = np.sum(sp2[peaks] > threshold)
+    wrong_peak = np.sum(sp2 > threshold) - found
+    print(f"Picks in the original image : {len(peaks)}")
     print(f"Picks found : {found}")
-    print(f"Wrong picks found : {wrong_pick}")
-    return found, wrong_pick
+    print(f"Wrong peaks found : {wrong_peak}")
+    return found, wrong_peak
 
 
-def picks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray):
+def peaks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray):
     sp1 = original_sparse.ravel()
     sp2 = reconstructed_sparse.ravel()
-    picks = np.argwhere(sp1 >= 2)
-    intensity = sp2[picks] / sp1[picks]
-    print(f"Mean intensity of the reconstructed picks : {np.mean(intensity):.1%}")
+    peaks = np.argwhere(sp1 >= 2)
+    intensity = sp2[peaks] / sp1[peaks]
+    print(f"Mean intensity of the reconstructed peaks : {np.mean(intensity):.1%}")
 
 
 def compare_smoothing_operator(s: SparseSmoothSignal):
@@ -523,8 +523,8 @@ if __name__ == '__main__':
     # x1, x2 = test_best_lines(s1, L, l, t, psnr, "Laplacian")
     # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Laplacian"
     # plot_4(s1.sparse, s1.smooth, x1, x2, name)
-    # picks_found(s1.sparse, x1, 2)
-    # picks_intensity(s1.sparse, x1)
+    # peaks_found(s1.sparse, x1, 2)
+    # peaks_intensity(s1.sparse, x1)
     # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "Laplacian", 40.)
     test_thetas(s1, 0.05, 0.95, 50, L, l, "Laplacian", psnr)
     # test_lambdas(s1, 0.05, 2, 50, L, t, "Laplacian", psnr)
