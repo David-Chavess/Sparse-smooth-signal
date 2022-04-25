@@ -1,44 +1,9 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
-import numpy as np
-from matplotlib import pyplot as plt
-from pycsou.core import LinearOperator
-from pycsou.linop import Gradient, Laplacian
-from scipy.stats import wasserstein_distance
-
 from src.lasso_solver import LassoSolver
-from src.solver import MyMatrixFreeOperator
-from src.sparse_smooth_signal import SparseSmoothSignal
 from src.sparse_smooth_solver import SparseSmoothSolver
 from src.tikhonov_solver import TikhonovSolver
-
-
-def nmse(x1: np.ndarray, x2: np.ndarray) -> float:
-    return np.sqrt(np.mean((x1 - x2) ** 2) / np.mean(x1 ** 2))
-
-
-def Wasserstein_distance(x1: np.ndarray, x2: np.ndarray) -> float:
-    return wasserstein_distance(x1.ravel() / np.sum(x1), x2.ravel() / np.sum(x2))
-
-
-def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) -> LinearOperator:
-    if isinstance(op_l2, str):
-        if op_l2 == "Gradient":
-            op = Gradient(dim, kind='forward')
-        elif op_l2 == "Laplacian":
-            op = Laplacian(dim)
-        else:
-            raise ValueError("Operator name is invalid")
-        op.compute_lipschitz_cst(tol=1e-3)
-        return op
-    else:
-        return op_l2
-
-
-def get_MyMatrixFreeOperator(dim: Tuple[int, int], L: float) -> MyMatrixFreeOperator:
-    return MyMatrixFreeOperator(dim, random_lines(dim, int(L * dim[0] * dim[1])))
+from src.util import *
 
 
 def off_set_smooth(smooth: np.ndarray, x: np.ndarray) -> np.ndarray:
@@ -55,214 +20,6 @@ def print_best(loss_x, loss_x1, loss_x2) -> None:
     print("Smooth:")
     for x in sorted(loss_x2, key=loss_x2.get):
         print(f"{x} : {loss_x2[x]}")
-
-
-def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
-    points = set()
-
-    while len(points) < size:
-        # 2d Gaussian
-        p = np.abs(np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], size - len(points) + 1))
-        p /= np.max(p)
-
-        # Cast to index
-        p[:, 0] *= dim[0] - 1
-        p[:, 1] *= dim[1] - 1
-
-        # Add to set as int types
-        s = set(map(tuple, p.astype((int, int))))
-        points.update(s)
-
-    # We don't want the point (0, 0)
-    points.discard((0, 0))
-    # points.add((0, 0))
-
-    # Plot distribution of points
-    # v = np.array(sorted(list(points)))
-    # plt.scatter(*zip(*v))
-    # plt.show()
-
-    return np.array(list(points))
-
-
-def random_lines(dim: Tuple[int, int], size: int) -> np.ndarray:
-    points = random_points(dim, size)
-    index = points[:, 0] + points[:, 1] * dim[0]
-    return index
-
-
-def plot_2(x1: np.ndarray, x2: np.ndarray, x1_name: str = "", x2_name: str = "", name: str = "", min_range: float = 0,
-           max_range: float = 7) -> None:
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
-    fig.suptitle(name)
-
-    im = ax1.imshow(x1, vmin=min_range, vmax=max_range)
-    ax1.set_axis_off()
-    ax1.set_title(x1_name)
-
-    im = ax2.imshow(x2, vmin=min_range, vmax=max_range)
-    ax2.set_axis_off()
-    ax2.set_title(x2_name)
-
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.95,
-                        wspace=0.02)
-    cb_ax = fig.add_axes([0.95, 0.05, 0.02, 0.85])
-    cbar = fig.colorbar(im, cax=cb_ax)
-
-
-def plot_solvers(x: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso: np.ndarray, name: str = "",
-                 min_range: float = 0,
-                 max_range: float = 7) -> None:
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
-    fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
-    fig.suptitle(name)
-
-    im = ax1.imshow(x, vmin=min_range, vmax=max_range)
-    ax1.set_axis_off()
-    ax1.set_title("Sparse + Smooth")
-
-    im = ax2.imshow(x_tik, vmin=min_range, vmax=max_range)
-    ax2.set_axis_off()
-    ax2.set_title("Tikhonov without operator")
-
-    im = ax3.imshow(x_tik_op, vmin=min_range, vmax=max_range)
-    ax3.set_axis_off()
-    ax3.set_title("Tikhonov with operator")
-
-    im = ax4.imshow(x_lasso, vmin=min_range, vmax=max_range)
-    ax4.set_axis_off()
-    ax4.set_title("Lasso")
-
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.95,
-                        wspace=0.02)
-    cb_ax = fig.add_axes([0.95, 0.05, 0.02, 0.85])
-    cbar = fig.colorbar(im, cax=cb_ax)
-
-
-def plot_4(x_sparse: np.ndarray, x_smooth: np.ndarray, x1: np.ndarray, x2: np.ndarray, name: str = "") -> None:
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
-    fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
-    fig.suptitle(name)
-
-    im_p = ax1.imshow(x_sparse, vmin=0, vmax=7)
-    ax1.axis('off')
-    ax1.set_title("Original Sparse")
-
-    im_s = ax2.imshow(x_smooth, vmin=0, vmax=1)
-    ax2.axis('off')
-    ax2.set_title("Original Smooth")
-
-    im = ax3.imshow(x1, vmin=0, vmax=7)
-    ax3.axis('off')
-    ax3.set_title("Reconstructed Sparse")
-
-    im = ax4.imshow(x2, vmin=0, vmax=1)
-    ax4.axis('off')
-    ax4.set_title("Reconstructed Smooth")
-
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.92,
-                        wspace=0.1, hspace=0.1)
-    cb_ax = fig.add_axes([0.92, 0.05, 0.02, 0.85])
-    cbar = fig.colorbar(im_s, cax=cb_ax)
-    cb_ax = fig.add_axes([0.45, 0.05, 0.02, 0.85])
-    cbar = fig.colorbar(im_p, cax=cb_ax)
-
-
-def plot_8(x_sparse: np.ndarray, x_smooth: np.ndarray, x1: np.ndarray, x2: np.ndarray, x3: np.ndarray, x4: np.ndarray,
-           x5: np.ndarray, x6: np.ndarray, name: str = "") -> None:
-    fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(2, 4, figsize=(20, 10))
-    fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
-    fig.suptitle(name)
-
-    im_p = ax1.imshow(x_sparse, vmin=0, vmax=7)
-    ax1.axis('off')
-    ax1.set_title("Original")
-
-    im = ax2.imshow(x1, vmin=0, vmax=7)
-    ax2.axis('off')
-    ax2.set_title("Best choose")
-
-    im = ax3.imshow(x3, vmin=0, vmax=7)
-    ax3.axis('off')
-    ax3.set_title("Random")
-
-    im = ax4.imshow(x5, vmin=0, vmax=7)
-    ax4.axis('off')
-    ax4.set_title("Random with more chance on low frequency")
-
-    im_s = ax5.imshow(x_smooth, vmin=0, vmax=1)
-    ax5.axis('off')
-
-    im = ax6.imshow(x2, vmin=0, vmax=1)
-    ax6.axis('off')
-
-    im = ax7.imshow(x4, vmin=0, vmax=1)
-    ax7.axis('off')
-
-    im = ax8.imshow(x6, vmin=0, vmax=1)
-    ax8.axis('off')
-
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.92,
-                        wspace=0.1, hspace=0.1)
-    cb_ax = fig.add_axes([0.93, 0.50, 0.02, 0.40])
-    cbar = fig.colorbar(im_p, cax=cb_ax)
-    cb_ax = fig.add_axes([0.93, 0.05, 0.02, 0.40])
-    cbar = fig.colorbar(im_s, cax=cb_ax)
-
-
-def plot_4_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray, x_Laplacian: np.ndarray) -> None:
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
-
-    im = ax1.imshow(x_smooth, vmin=0, vmax=1)
-    ax1.axis('off')
-    ax1.set_title("Original Smooth")
-
-    im = ax2.imshow(x_None)
-    ax2.axis('off')
-    ax2.set_title("Smooth without operator")
-
-    im = ax3.imshow(x_Gradian, vmin=0, vmax=1)
-    ax3.axis('off')
-    ax3.set_title("Smooth with Gradient")
-
-    im = ax4.imshow(x_Laplacian, vmin=0, vmax=1)
-    ax4.axis('off')
-    ax4.set_title("Smooth with Laplacian")
-
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.92,
-                        wspace=0.1, hspace=0.1)
-    cb_ax = fig.add_axes([0.93, 0.05, 0.02, 0.85])
-    cbar = fig.colorbar(im, cax=cb_ax)
-
-
-def plot_loss(x, loss_x1, loss_x2, name: str = "", var: str = ""):
-    fig, (ax1, ax2), = plt.subplots(1, 2, figsize=(10, 5))
-    fig.canvas.manager.set_window_title(f'Loss comparison')
-    fig.suptitle(name)
-
-    ax1.plot(x, loss_x1)
-    ax1.set_xlabel(var)
-    ax1.set_ylabel("Wasserstein distance")
-    ax1.set_title("L1 loss")
-
-    ax2.plot(x, loss_x2)
-    ax2.set_xlabel(var)
-    ax2.set_ylabel("NMSE")
-    ax2.set_title("L2 loss")
-
-
-def plot_peaks(x, nb_peaks, peak_found, wrong_peaks_found, threshold: float, var: str = ""):
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    fig.canvas.manager.set_window_title(f'Recovered peak comparison')
-    ax.set_title(f"Recovered peak comparison, Threshold = {threshold}")
-
-    ax.semilogy(x, peak_found, label='Peaks found')
-    ax.semilogy(x, wrong_peaks_found, label='Wrong Peaks found')
-    ax.axhline(y=nb_peaks, label='number of peaks', linestyle='--')
-    ax.set_xlabel(var)
-    ax.set_ylabel("Number of peaks")
-    ax.legend()
 
 
 def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator) -> Tuple[np.ndarray, np.ndarray]:
@@ -287,7 +44,7 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
     x_sparse = x_sparse.reshape(s.dim)
     x_smooth = x_smooth.reshape(s.dim)
 
-    plot_4(s.sparse, s.smooth, x_sparse, x_smooth, name)
+    plot_reconstruction(s.sparse, s.smooth, x_sparse, x_smooth, name)
 
     m = np.max(np.abs(s.H.adjoint(s.y)))
     lambda1 = lambda1 * m
@@ -328,16 +85,16 @@ def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[fl
     for op in operators_l2:
         op_l2 = get_L2_operator(s.dim, op)
         for h in L:
-            s.H = get_MyMatrixFreeOperator(s.dim, h)
+            s.H = get_low_freq_operator(s.dim, h)
             for p in psnr:
                 s.gaussian_noise(p)
                 for l in lambdas:
                     for t in thetas:
                         name = f"λ:{l:.2f}, θ:{t:.2f}, {h:.1%} measurements, PSNR:{p:.0f}, L2 operator:{op.__str__()}"
                         x1, x2 = test(s, l * t, l * (1 - t), op_l2)
-                        plot_4(s.sparse, s.smooth, x1, x2, name)
+                        plot_reconstruction(s.sparse, s.smooth, x1, x2, name)
                         loss_x[name] = nmse(s.x, x1 + x2)
-                        loss_x1[name] = Wasserstein_distance(s.sparse, x1)
+                        loss_x1[name] = wasserstein_dist(s.sparse, x1)
                         loss_x2[name] = nmse(s.smooth, x2)
 
     print_best(loss_x, loss_x1, loss_x2)
@@ -354,9 +111,9 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
     loss_x2 = []
     measurements = np.linspace(L_min, L_max, nb)
     for l in measurements:
-        s.H = get_MyMatrixFreeOperator(s.dim, l)
+        s.H = get_low_freq_operator(s.dim, l)
         x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-        loss_x1.append(Wasserstein_distance(s.sparse, x1))
+        loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
@@ -367,7 +124,7 @@ def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: flo
 
 def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.):
-    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    s.H = get_low_freq_operator(s.dim, L)
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
@@ -377,7 +134,7 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
     thetas = np.linspace(theta_min, theta_max, nb)
     for t in thetas:
         x1, x2 = test_best_lines(s, L, lambda_, t, psnr, op_l2)
-        loss_x1.append(Wasserstein_distance(s.sparse, x1))
+        loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
         peaks.append(peaks_found(s.sparse, x1, threshold))
 
@@ -391,7 +148,7 @@ def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: i
 
 def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
                  operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.):
-    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    s.H = get_low_freq_operator(s.dim, L)
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
@@ -401,7 +158,7 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
     lambdas = np.linspace(lambda_min, lambda_max, nb)
     for l in lambdas:
         x1, x2 = test_best_lines(s, L, l, theta, psnr, op_l2)
-        loss_x1.append(Wasserstein_distance(s.sparse, x1))
+        loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
         peaks.append(peaks_found(s.sparse, x1, 1))
 
@@ -415,7 +172,7 @@ def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb
 
 def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
                operator_l2: None | str | LinearOperator = "Laplacian"):
-    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    s.H = get_low_freq_operator(s.dim, L)
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
     loss_x1 = []
@@ -424,19 +181,13 @@ def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int,
     for p in psnrs:
         s.gaussian_noise(p)
         x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-        loss_x1.append(Wasserstein_distance(s.sparse, x1))
+        loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
 
     name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, L2 operator:{operator_l2.__str__()}"
     print(f"Best value L1: {psnrs[np.argmin(loss_x1)]}")
     print(f"Best value L2: {psnrs[np.argmin(loss_x2)]}")
     plot_loss(psnrs, loss_x1, loss_x2, name, "PSNR")
-
-
-def get_best_lines(s: SparseSmoothSignal, L: float):
-    y = np.abs(np.fft.fft2(s.x)).ravel()
-    y[0] = 0
-    return np.sort(np.argsort(y)[-int(L * d[0] * d[1]):])
 
 
 def test_best_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: float, psnr: float,
@@ -446,26 +197,6 @@ def test_best_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: floa
     s.H = MyMatrixFreeOperator(s.dim, best_lines)
     x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, operator_l2))
     return x1, x2
-
-
-def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, threshold: float = 0.75):
-    sp1 = original_sparse.ravel()
-    sp2 = reconstructed_sparse.ravel()
-    peaks = np.argwhere(sp1 >= 2)
-    found = np.sum(sp2[peaks] > threshold)
-    wrong_peak = np.sum(sp2 > threshold) - found
-    print(f"Picks in the original image : {len(peaks)}")
-    print(f"Picks found : {found}")
-    print(f"Wrong peaks found : {wrong_peak}")
-    return found, wrong_peak
-
-
-def peaks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray):
-    sp1 = original_sparse.ravel()
-    sp2 = reconstructed_sparse.ravel()
-    peaks = np.argwhere(sp1 >= 2)
-    intensity = sp2[peaks] / sp1[peaks]
-    print(f"Mean intensity of the reconstructed peaks : {np.mean(intensity):.1%}")
 
 
 def compare_smoothing_operator(s: SparseSmoothSignal):
@@ -480,7 +211,7 @@ def compare_smoothing_operator(s: SparseSmoothSignal):
     _, s_G = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, "Gradient"))
     _, s_L = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, "Laplacian"))
 
-    plot_4_smooth(s.smooth, s_None, s_G, s_L)
+    plot_smooth(s.smooth, s_None, s_G, s_L)
 
 
 def compare_smooth(x_smooth: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso: np.ndarray, name: str = ""):
@@ -497,11 +228,11 @@ def compare_choose_of_lines(s: SparseSmoothSignal, L: float, lambda_: float, the
     x1_best, x2_best = test_best_lines(s, L, lambda_, theta, psnr, operator_l2)
     s.H = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
     x1_random, x2_random = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(s.dim, operator_l2))
-    s.H = get_MyMatrixFreeOperator(s.dim, L)
+    s.H = get_low_freq_operator(s.dim, L)
     x1_gaus, x2_gaus = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(s.dim, operator_l2))
 
     name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
-    plot_8(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_gaus, x2_gaus, name)
+    plot_3_reconstruction(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_gaus, x2_gaus, name)
 
 
 if __name__ == '__main__':
