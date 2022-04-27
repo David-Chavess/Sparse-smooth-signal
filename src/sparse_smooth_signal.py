@@ -241,9 +241,9 @@ class SparseSmoothSignal:
         samples1 = np.stack((x.flatten(), y.flatten()), axis=-1)
 
         # random gaussian's centers
-        samples2 = np.stack((0.75 * (2 * rng.random(size=nb) - 1), 0.75 * (2 * rng.random(size=nb) - 1)), axis=-1)
+        samples2 = np.stack((0.8 * (2 * rng.random(size=nb) - 1), 0.8 * (2 * rng.random(size=nb) - 1)), axis=-1)
 
-        sigma = 1 / 5
+        sigma = 1 / rng.uniform(5, 50, nb)
         # used to reduce computation time
         max_distance = 3 * sigma
         # gaussian

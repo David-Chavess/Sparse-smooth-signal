@@ -5,7 +5,7 @@ from typing import Tuple, List
 import numpy as np
 from matplotlib import pyplot as plt
 from pycsou.core import LinearOperator
-from pycsou.linop import Gradient, Laplacian
+from pycsou.linop import Gradient, Laplacian, IdentityOperator
 from scipy.stats import wasserstein_distance
 
 from src import SparseSmoothSignal
@@ -444,8 +444,8 @@ def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, t
     peaks = np.argwhere(sp1 >= 2)
     found = np.sum(sp2[peaks] > threshold)
     wrong_peak = np.sum(sp2 > threshold) - found
-    print(f"Picks in the original image : {len(peaks)}")
-    print(f"Picks found : {found}")
+    print(f"Peaks in the original image : {len(peaks)}")
+    print(f"Peaks found : {found}")
     print(f"Wrong peaks found : {wrong_peak}")
     return found, wrong_peak
 
@@ -485,4 +485,4 @@ def get_best_lines(s: SparseSmoothSignal, L: float):
     """
     y = np.abs(np.fft.fft2(s.x)).ravel()
     y[0] = 0
-    return np.sort(np.argsort(y)[-int(L * d[0] * d[1]):])
+    return np.sort(np.argsort(y)[-int(L * s.dim[0] * s.dim[1]):])
