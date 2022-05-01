@@ -308,17 +308,17 @@ class SparseSmoothSignal:
         fig.canvas.set_window_title(f'Spare + Smooth Signal : {name}')
         fig.suptitle(name)
 
-        im = ax1.imshow(self.x, vmin=0, vmax=7)
+        im = ax1.imshow(self.x, vmin=0, vmax=self.MAX_SMOOTH_AMPLITUDE + self.MAX_SPARSE_AMPLITUDE)
         fig.colorbar(im, ax=ax1, fraction=0.047, pad=0.01)
         ax1.axis('off')
         ax1.set_title("X")
 
-        im = ax2.imshow(self.smooth, vmin=0, vmax=1)
+        im = ax2.imshow(self.smooth, vmin=0, vmax=self.MAX_SMOOTH_AMPLITUDE)
         fig.colorbar(im, ax=ax2, fraction=0.047, pad=0.01)
         ax2.axis('off')
         ax2.set_title("Smooth")
 
-        im = ax3.imshow(self.sparse, vmin=0, vmax=6)
+        im = ax3.imshow(self.sparse, vmin=0, vmax=self.MAX_SPARSE_AMPLITUDE)
         fig.colorbar(im, ax=ax3, fraction=0.047, pad=0.01)
         ax3.axis('off')
         ax3.set_title("Sparse")
