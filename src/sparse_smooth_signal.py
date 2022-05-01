@@ -20,6 +20,11 @@ class SparseSmoothSignal:
     y is the signal yo with some error represented by a gaussian white noise.
     """
 
+    # Define the values that our simulated signal can take
+    MIN_SPARSE_AMPLITUDE = 2.
+    MAX_SPARSE_AMPLITUDE = 6.
+    MAX_SMOOTH_AMPLITUDE = 2.
+
     def __init__(self, dim: Tuple[int, int],
                  sparse: None | np.ndarray = None,
                  smooth: None | np.ndarray = None,
@@ -211,10 +216,10 @@ class SparseSmoothSignal:
             seed used for the random generator
         """
         if seed is None:
-            rand_matrix = 4 * sp.rand(self.__dim[0] - 2, self.__dim[1] - 2, density=0.005)
+            rand_matrix = (self.MAX_SPARSE_AMPLITUDE - self.MIN_SPARSE_AMPLITUDE) * sp.rand(self.__dim[0] - 2, self.__dim[1] - 2, density=0.005)
         else:
-            rand_matrix = 4 * sp.rand(self.__dim[0] - 2, self.__dim[1] - 2, density=0.005, random_state=seed)
-        rand_matrix.data += 2
+            rand_matrix = (self.MAX_SPARSE_AMPLITUDE - self.MIN_SPARSE_AMPLITUDE) * sp.rand(self.__dim[0] - 2, self.__dim[1] - 2, density=0.005, random_state=seed)
+        rand_matrix.data += self.MIN_SPARSE_AMPLITUDE
         self.sparse = np.pad(rand_matrix.toarray(), ((1, 1), (1, 1)), mode='constant', constant_values=0)
 
     def random_smooth(self, seed: None | int = None) -> None:
@@ -253,7 +258,7 @@ class SparseSmoothSignal:
         alpha = np.ones(samples2.shape[0])
         m = MDMOp * alpha
         smooth = (m / np.max(m)).reshape(self.__dim[0] - 2, self.__dim[1] - 2)
-        self.smooth = np.pad(smooth, ((1, 1), (1, 1)), mode='constant', constant_values=0)
+        self.smooth = self.MAX_SMOOTH_AMPLITUDE * np.pad(smooth, ((1, 1), (1, 1)), mode='constant', constant_values=0)
 
     def random_measurement_operator(self, size: int = -1) -> None:
         """

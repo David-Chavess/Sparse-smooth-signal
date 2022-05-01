@@ -175,9 +175,10 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
                 for l2 in lambdas2:
                     name = f"λ1:{l1:.2f}, λ2:{l2:.2f}, {L:.1%} measurements, PSNR:{p:.0f}, L2 operator:{op.__str__()}"
                     x1, x2 = solve(s, l1, l2, op_l2)
-                    plot_reconstruction(s.sparse, s.smooth, x1, x2, name)
                     loss_x1[name] = wasserstein_dist(s.sparse, x1)
                     loss_x2[name] = nmse(s.smooth, x2)
+                    peaks_found(s.sparse, x1, 1)
+                    plot_reconstruction(s.sparse, s.smooth, x1, x2, name)
 
     print_best(loss_x1, loss_x2)
 
@@ -356,6 +357,6 @@ if __name__ == '__main__':
 
     # test_lambda1(s1, L, 0.001, 0.1, 10, 0.2, "Laplacian", psnr, 1)
 
-    # test_hyperparameters(s1, L, [0.01, 0.05, 0.1], [0.1, 0.2, 0.3], ["Laplacian"], [50.0])
+    test_hyperparameters(s1, L, [0.01, 0.02, 0.05], [0.1, 0.2], ["Laplacian"], [50.0])
 
     plt.show()

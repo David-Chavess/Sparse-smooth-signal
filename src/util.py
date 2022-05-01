@@ -202,7 +202,7 @@ def get_best_freq_operator(s: SparseSmoothSignal, L: float) -> MyMatrixFreeOpera
 
 def plot_solvers(x: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso: np.ndarray, name: str = "",
                  min_range: float = 0,
-                 max_range: float = 7) -> None:
+                 max_range: float = SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE) -> None:
     """
     Plot the output images of the different solvers
 
@@ -271,19 +271,19 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
-    im_p = ax1.imshow(x_sparse, vmin=0, vmax=7)
+    im_p = ax1.imshow(x_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax1.axis('off')
     ax1.set_title("Original Sparse")
 
-    im_s = ax2.imshow(x_smooth, vmin=0, vmax=1)
+    im_s = ax2.imshow(x_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax2.axis('off')
     ax2.set_title("Original Smooth")
 
-    im = ax3.imshow(x_reconst_sparse, vmin=0, vmax=7)
+    im = ax3.imshow(x_reconst_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax3.axis('off')
     ax3.set_title("Reconstructed Sparse")
 
-    im = ax4.imshow(x_reconst_smooth, vmin=0, vmax=1)
+    im = ax4.imshow(x_reconst_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax4.axis('off')
     ax4.set_title("Reconstructed Smooth")
 
@@ -326,32 +326,32 @@ def plot_reconstruction_measurements(x_sparse: np.ndarray, x_smooth: np.ndarray,
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
-    im_p = ax1.imshow(x_sparse, vmin=0, vmax=7)
+    im_p = ax1.imshow(x_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax1.axis('off')
     ax1.set_title("Original")
 
-    im = ax2.imshow(x1_sparse, vmin=0, vmax=7)
+    im = ax2.imshow(x1_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax2.axis('off')
     ax2.set_title("Best choose")
 
-    im = ax3.imshow(x2_sparse, vmin=0, vmax=7)
+    im = ax3.imshow(x2_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax3.axis('off')
     ax3.set_title("Random")
 
-    im = ax4.imshow(x3_sparse, vmin=0, vmax=7)
+    im = ax4.imshow(x3_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax4.axis('off')
     ax4.set_title("Random with more low frequency")
 
-    im_s = ax5.imshow(x_smooth, vmin=0, vmax=1)
+    im_s = ax5.imshow(x_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax5.axis('off')
 
-    im = ax6.imshow(x1_smooth, vmin=0, vmax=1)
+    im = ax6.imshow(x1_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax6.axis('off')
 
-    im = ax7.imshow(x2_smooth, vmin=0, vmax=1)
+    im = ax7.imshow(x2_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax7.axis('off')
 
-    im = ax8.imshow(x3_smooth, vmin=0, vmax=1)
+    im = ax8.imshow(x3_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax8.axis('off')
 
     fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.92,
@@ -380,7 +380,7 @@ def plot_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray,
     """
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
 
-    im = ax1.imshow(x_smooth, vmin=0, vmax=1)
+    im = ax1.imshow(x_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax1.axis('off')
     ax1.set_title("Original Smooth")
 
@@ -388,11 +388,11 @@ def plot_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray,
     ax2.axis('off')
     ax2.set_title("Smooth without operator")
 
-    im = ax3.imshow(x_Gradian, vmin=0, vmax=1)
+    im = ax3.imshow(x_Gradian, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax3.axis('off')
     ax3.set_title("Smooth with Gradient")
 
-    im = ax4.imshow(x_Laplacian, vmin=0, vmax=1)
+    im = ax4.imshow(x_Laplacian, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax4.axis('off')
     ax4.set_title("Smooth with Laplacian")
 
