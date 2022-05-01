@@ -1,19 +1,45 @@
 from __future__ import annotations
 
+from typing import Dict
+
+from src import SparseSmoothSignal
 from src.lasso_solver import LassoSolver
 from src.sparse_smooth_solver import SparseSmoothSolver
 from src.tikhonov_solver import TikhonovSolver
 from src.util import *
 
 
-def off_set_smooth(smooth: np.ndarray, x: np.ndarray) -> np.ndarray:
-    return np.mean(smooth) - np.mean(x)
+def off_set_smooth(smooth: np.ndarray, x_smooth: np.ndarray) -> np.ndarray:
+    """
+    Offset the smooth reconstruction because the reconstruction is 0-mean
+
+    Parameters
+    ----------
+    smooth : np.ndarray
+        Smooth component of the original signal
+    x_smooth : np.ndarray
+        Smooth component to offset
+
+    Returns
+    -------
+    The offset values
+    """
+    return np.mean(smooth) - np.mean(x_smooth)
 
 
-def print_best(loss_x, loss_x1, loss_x2) -> None:
-    print("Sparse + Smooth:")
-    for x in sorted(loss_x, key=loss_x.get):
-        print(f"{x} : {loss_x[x]}")
+def print_best(loss_x1: Dict, loss_x2: Dict) -> None:
+    """
+    Print the loss for each component
+
+    Parameters
+    ----------
+    loss_x1 : Dict
+    loss_x2 : Dict
+
+    Returns
+    -------
+
+    """
     print("Sparse:")
     for x in sorted(loss_x1, key=loss_x1.get):
         print(f"{x} : {loss_x1[x]}")
@@ -22,7 +48,26 @@ def print_best(loss_x, loss_x1, loss_x2) -> None:
         print(f"{x} : {loss_x2[x]}")
 
 
-def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator) -> Tuple[np.ndarray, np.ndarray]:
+def solve(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Solve the inverse problem for a simulated signal s
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    l1 : float
+        Weight of the L1 penalty
+    l2 : float
+        Weight of the L2 penalty
+    op: None | LinearOperator
+        Operator used in the L2 penalty
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Tuple (x1, x2) with the sparse component x1 and the smooth component x2.
+    """
     m = np.max(np.abs(s.H.adjoint(s.y)))
     solver = SparseSmoothSolver(s.y, s.H, l1 * m, l2 * m, op)
     x1, x2 = solver.solve()
@@ -30,17 +75,40 @@ def test(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator)
     x1 = x1.reshape(s.dim)
     x2 = x2.reshape(s.dim)
 
-    x2 += off_set_smooth(s.smooth, x2)
     x1[x1 < 0] = 0
+    x2 += off_set_smooth(s.smooth, x2)
 
     return x1, x2
 
 
-def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
-                 operator_l2: None | str | LinearOperator = "Laplacian", name: str = ""):
+def solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
+            operator_l2: None | str | LinearOperator = "Laplacian",
+            name: str = "") -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Solve the inverse problem for a simulated signal s with different solvers. It uses Lasso, Tikhonov with and without
+    operator and our "Sparse + smooth" solver. Used to compare the performance of each one.
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    lambda1 : float
+        Weight of the L1 penalty
+    lambda2 : float
+        Weight of the L2 penalty
+    operator_l2 : None | str | LinearOperator
+        Operator used in the L2 penalty
+    name : str
+        Name used as title, usually contains the parameters used in the solver
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        Tuple (x_sparse, x_smooth, x_tik, x_tik_op, x_lasso) with the solutions of each solver
+    """
     op = get_L2_operator(s.dim, operator_l2)
 
-    x_sparse, x_smooth = test(s, lambda1, lambda2, op)
+    x_sparse, x_smooth = solve(s, lambda1, lambda2, op)
     x_sparse = x_sparse.reshape(s.dim)
     x_smooth = x_smooth.reshape(s.dim)
 
@@ -77,162 +145,197 @@ def test_solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
     return x_sparse, x_smooth, x_tik, x_tik_op, x_lasso
 
 
-def test_hyperparameters(s: SparseSmoothSignal, L: List[float], lambdas: List[float], thetas: List[float],
-                         operators_l2: List[None | str | LinearOperator], psnr: List[float]):
-    loss_x = {}
+def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float], lambdas2: List[float],
+                         operators_l2: List[None | str | LinearOperator], psnr: List[float]) -> None:
+    """
+    Solve and plot all reconstruction made by the combination of all the parameters
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    L : float
+        Number of measurements
+    lambdas1 : List[float]
+        Weights of the L1 penalty
+    lambdas2 : List[float]
+        Weights of the L1 penalty
+    operators_l2 : List[None | str | LinearOperator]
+        Operators used in the L2 penalty
+    psnr : List[float]
+        PSNRs of the measurements
+    """
     loss_x1 = {}
     loss_x2 = {}
     for op in operators_l2:
         op_l2 = get_L2_operator(s.dim, op)
-        for h in L:
-            s.H = get_low_freq_operator(s.dim, h)
-            for p in psnr:
-                s.gaussian_noise(p)
-                for l in lambdas:
-                    for t in thetas:
-                        name = f"λ:{l:.2f}, θ:{t:.2f}, {h:.1%} measurements, PSNR:{p:.0f}, L2 operator:{op.__str__()}"
-                        x1, x2 = test(s, l * t, l * (1 - t), op_l2)
-                        plot_reconstruction(s.sparse, s.smooth, x1, x2, name)
-                        loss_x[name] = nmse(s.x, x1 + x2)
-                        loss_x1[name] = wasserstein_dist(s.sparse, x1)
-                        loss_x2[name] = nmse(s.smooth, x2)
+        for p in psnr:
+            s.gaussian_noise(p)
+            for l1 in lambdas1:
+                for l2 in lambdas2:
+                    name = f"λ1:{l1:.2f}, λ2:{l2:.2f}, {L:.1%} measurements, PSNR:{p:.0f}, L2 operator:{op.__str__()}"
+                    x1, x2 = solve(s, l1, l2, op_l2)
+                    plot_reconstruction(s.sparse, s.smooth, x1, x2, name)
+                    loss_x1[name] = wasserstein_dist(s.sparse, x1)
+                    loss_x2[name] = nmse(s.smooth, x2)
 
-    print_best(loss_x, loss_x1, loss_x2)
-    s.show()
+    print_best(loss_x1, loss_x2)
 
 
-def test_numbers_of_measurements(s: SparseSmoothSignal, L_min: float, L_max: float, nb: int, lambda_: float,
-                                 theta: float, operator_l2: None | str | LinearOperator = "Laplacian",
-                                 psnr: float = 50.):
-    op_l2 = get_L2_operator(s.dim, operator_l2)
-    s.psnr = psnr
+def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_max: float, nb: int, lambda2: float,
+                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.,
+                 threshold: float = 1.) -> None:
+    """
+    Test the lambda1 parameter of some fix parameters. It makes nb reconstructions and plot the loss of each
+    component. It also plots the number of peaks recovered in the sparse component.
 
-    loss_x1 = []
-    loss_x2 = []
-    measurements = np.linspace(L_min, L_max, nb)
-    for l in measurements:
-        s.H = get_low_freq_operator(s.dim, l)
-        x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
-        loss_x1.append(wasserstein_dist(s.sparse, x1))
-        loss_x2.append(nmse(s.smooth, x2))
-
-    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
-    print(f"Best value L1: {measurements[np.argmin(loss_x1)]}")
-    print(f"Best value L2: {measurements[np.argmin(loss_x2)]}")
-    plot_loss(measurements * 100, loss_x1, loss_x2, name, "Numbers of measurements")
-
-
-def test_thetas(s: SparseSmoothSignal, theta_min: float, theta_max: float, nb: int, L: float, lambda_: float,
-                operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.):
-    s.H = get_low_freq_operator(s.dim, L)
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    L : float
+        Number of measurements
+    lambda1_min : float
+        Minimum value of λ1
+    lambda1_max : float
+        Maximum value of λ1
+    nb : int
+        Number of reconstructions made
+    lambda2 : float
+        Weight of the L2 penalty
+    operator_l2 : None | str | LinearOperator
+        Operator used in the L2 penalty
+    psnr : float
+        PSNR of the measurements
+    threshold : float
+        Threshold used in plot_peaks to count the number of peaks recovered
+    """
     s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
     loss_x1 = []
     loss_x2 = []
     peaks = []
-    thetas = np.linspace(theta_min, theta_max, nb)
-    for t in thetas:
-        x1, x2 = test_best_lines(s, L, lambda_, t, psnr, op_l2)
-        loss_x1.append(wasserstein_dist(s.sparse, x1))
-        loss_x2.append(nmse(s.smooth, x2))
-        peaks.append(peaks_found(s.sparse, x1, threshold))
-
-    name = f"λ:{lambda_:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
-    print(f"Best value L1: {thetas[np.argmin(loss_x1)]}")
-    print(f"Best value L2: {thetas[np.argmin(loss_x2)]}")
-    plot_loss(thetas, loss_x1, loss_x2, name, "θ")
-    peaks = np.array(peaks)
-    plot_peaks(thetas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "θ")
-
-
-def test_lambdas(s: SparseSmoothSignal, lambda_min: float, lambda_max: float, nb: int, L: float, theta: float,
-                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.):
-    s.H = get_low_freq_operator(s.dim, L)
-    s.gaussian_noise(psnr)
-    op_l2 = get_L2_operator(s.dim, operator_l2)
-
-    loss_x1 = []
-    loss_x2 = []
-    peaks = []
-    lambdas = np.linspace(lambda_min, lambda_max, nb)
+    lambdas = np.linspace(lambda1_min, lambda1_max, nb)
     for l in lambdas:
-        x1, x2 = test_best_lines(s, L, l, theta, psnr, op_l2)
+        x1, x2 = solve(s, l, lambda2, op_l2)
         loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
         peaks.append(peaks_found(s.sparse, x1, 1))
 
-    name = f"θ:{theta:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
-    print(f"Best value L1: {lambdas[np.argmin(loss_x1)]}")
-    print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
-    plot_loss(lambdas, loss_x1, loss_x2, name, "λ")
+    name = f"λ2:{lambda2:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    print(f"Best value for L1 penalty: {lambdas[np.argmin(loss_x1)]}")
+    print(f"Best value for L2 penalty: {lambdas[np.argmin(loss_x2)]}")
+    plot_loss(lambdas, loss_x1, loss_x2, name, "λ1")
     peaks = np.array(peaks)
-    plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "λ")
+    plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "λ1")
 
 
-def test_noise(s: SparseSmoothSignal, psnr_min: float, psnr_max: float, nb: int, L: float, lambda_: float, theta: float,
-               operator_l2: None | str | LinearOperator = "Laplacian"):
-    s.H = get_low_freq_operator(s.dim, L)
+def test_lambda2(s: SparseSmoothSignal, lambda2_min: float, lambda2_max: float, nb: int, L: float, lambda1: float,
+                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.,
+                 threshold: float = 1.) -> None:
+    """
+    Test the lambda2 parameter of some fix parameters. It makes nb reconstructions and plot the loss of each
+    component. It also plots the number of peaks recovered in the sparse component.
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    L : float
+        Number of measurements
+    lambda2_min : float
+        Minimum value of λ2
+    lambda2_max : float
+        Maximum value of λ2
+    nb : int
+        Number of reconstructions made
+    lambda1 : float
+        Weight of the L1 penalty
+    operator_l2 : None | str | LinearOperator
+        Operator used in the L2 penalty
+    psnr : float
+        PSNR of the measurements
+    threshold : float
+        Threshold used in plot_peaks to count the number of peaks recovered
+    """
+    s.gaussian_noise(psnr)
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
     loss_x1 = []
     loss_x2 = []
-    psnrs = np.linspace(psnr_min, psnr_max, nb)
-    for p in psnrs:
-        s.gaussian_noise(p)
-        x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), op_l2)
+    peaks = []
+    lambdas = np.linspace(lambda2_min, lambda2_max, nb)
+    for l in lambdas:
+        x1, x2 = solve(s, lambda1, l, op_l2)
         loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
+        peaks.append(peaks_found(s.sparse, x1, threshold))
 
-    name = f"λ:{lambda_:.2f}, θ:{theta:.2f}, {L:.1%} measurements, L2 operator:{operator_l2.__str__()}"
-    print(f"Best value L1: {psnrs[np.argmin(loss_x1)]}")
-    print(f"Best value L2: {psnrs[np.argmin(loss_x2)]}")
-    plot_loss(psnrs, loss_x1, loss_x2, name, "PSNR")
-
-
-def test_best_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: float, psnr: float,
-                    operator_l2: None | str | LinearOperator = "Laplacian"):
-    s.psnr = psnr
-    best_lines = get_best_lines(s, L)
-    s.H = MyMatrixFreeOperator(s.dim, best_lines)
-    x1, x2 = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, operator_l2))
-    return x1, x2
+    name = f"λ1:{lambda1:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    print(f"Best value L1: {lambdas[np.argmin(loss_x1)]}")
+    print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
+    plot_loss(lambdas, loss_x1, loss_x2, name, "λ2")
+    peaks = np.array(peaks)
+    plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "λ2")
 
 
-def compare_smoothing_operator(s: SparseSmoothSignal):
-    s1.H = MyMatrixFreeOperator(d, get_best_lines(s1, L))
-    lambda_ = 0.2
-    theta = 0.5
+def compare_smoothing_operator(s: SparseSmoothSignal) -> None:
+    """
+    Compare the reconstructions using the Gradient, the Laplacian and no operator in the L2 penalty with the original signal
 
-    _, s_None = test(s, lambda_ * theta, 2 * lambda_ * (1 - theta), None)
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    """
+    lambda1 = 0.1
+    lambda2 = 0.1
 
-    lambda_ = 0.2
-    theta = 0.15
-    _, s_G = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, "Gradient"))
-    _, s_L = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(d, "Laplacian"))
+    _, s_None = solve(s, lambda1, lambda2, None)
+
+    lambda1 = 0.01
+    lambda2 = 0.1
+    _, s_G = solve(s, lambda1, lambda2, get_L2_operator(s.dim, "Gradient"))
+    _, s_L = solve(s, lambda1, lambda2, get_L2_operator(s.dim, "Laplacian"))
 
     plot_smooth(s.smooth, s_None, s_G, s_L)
 
 
-def compare_smooth(x_smooth: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso: np.ndarray, name: str = ""):
-    plot_solvers(x_smooth, x_tik, x_tik_op, x_lasso, name, max_range=1)
+def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: float, lambda2: float, psnr: float,
+                                   operator_l2: None | str | LinearOperator = "Laplacian") -> None:
+    """
+    Compare the reconstructions using different choice of measurements with the original signal.
 
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    L : float
+        Number of measurements
+    lambda1 : float
+        Weight of the L1 penalty
+    lambda2 : float
+        Weight of the L2 penalty
+    psnr : float
+        PSNR of the measurements
+    operator_l2 : None | str | LinearOperator
+        Operator used in the L2 penalty
+    """
+    s.gaussian_noise(psnr)
+    l2_op = get_L2_operator(s.dim, operator_l2)
 
-def compare_sparse(x_sparse: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso: np.ndarray, name: str = ""):
-    plot_solvers(x_sparse, x_tik, x_tik_op, x_lasso, name, min_range=1)
+    s.H = get_best_freq_operator(s, L)
+    x1_best, x2_best = solve(s, lambda1, lambda2, l2_op)
 
-
-def compare_choose_of_lines(s: SparseSmoothSignal, L: float, lambda_: float, theta: float, psnr: float,
-                            operator_l2: None | str | LinearOperator = "Laplacian"):
-    s.psnr = psnr
-    x1_best, x2_best = test_best_lines(s, L, lambda_, theta, psnr, operator_l2)
     s.H = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
-    x1_random, x2_random = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(s.dim, operator_l2))
-    s.H = get_low_freq_operator(s.dim, L)
-    x1_gaus, x2_gaus = test(s, lambda_ * theta, lambda_ * (1 - theta), get_L2_operator(s.dim, operator_l2))
+    x1_random, x2_random = solve(s, lambda1, lambda2, l2_op)
 
-    name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
-    plot_3_reconstruction(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_gaus, x2_gaus, name)
+    s.H = get_low_freq_operator(s.dim, L)
+    x1_low, x2_low = solve(s, lambda1, lambda2, l2_op)
+
+    name = f"λ1:{lambda1:.2f}, λ2:{lambda2:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    plot_reconstruction_measurements(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_low, x2_low, name)
 
 
 if __name__ == '__main__':
@@ -242,30 +345,17 @@ if __name__ == '__main__':
     s1.random_sparse(seed)
     s1.random_smooth(seed)
     L = 0.1
-    l = 0.2
-    t = 0.15
+    l1 = 0.02
+    l2 = 0.2
     psnr = 50.
     s1.psnr = psnr
-    s1.H = MyMatrixFreeOperator(d)
+    s1.H = get_best_freq_operator(s1, L)
 
-    # compare_choose_of_lines(s1, L, l, t, psnr, "Gradient")
+    # compare_choice_of_measurements(s1, L, l1, l2, psnr, "Gradient")
     # compare_smoothing_operator(s1)
-    # x1, x2 = test_best_lines(s1, L, l, t, psnr, "Gradient")
-    # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Laplacian"
-    # plot_4(s1.sparse, s1.smooth, x1, x2, name)
-    # peaks_found(s1.sparse, x1, 1)
-    # peaks_intensity(s1.sparse, x1)
-    # test_numbers_of_measurements(s1, 0.1, 0.75, 25, 0.1, 0.1, "Laplacian", 40.)
-    # test_thetas(s1, 0.05, 0.95, 50, L, l, "Laplacian", psnr)
-    # test_lambdas(s1, 0.05, 2, 50, L, t, "Laplacian", psnr)
-    # test_noise(s1, 0., 50., 25, 0.25, 0.1, 0.1, "Laplacian")
 
-    # name = f"λ:{l:.2f}, θ:{t:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator: Laplacian"
-    #
-    # x_sp, x_sm, x_t, x_t_op, x_l = test_solvers(s1, l * t, l * (1-t), "Laplacian", name)
-    # compare_smooth(x_sm, x_t, x_t_op, x_l)
-    # compare_sparse(x_sp, x_t, x_t_op, x_l)
+    # test_lambda1(s1, L, 0.001, 0.1, 10, 0.2, "Laplacian", psnr, 1)
 
-    # test_hyperparameters(s1, [0.1], [0.1, 0.2, 0.3], [0.1, 0.2, 0.3], ["Laplacian"], [20.0])
+    # test_hyperparameters(s1, L, [0.01, 0.05, 0.1], [0.1, 0.2, 0.3], ["Laplacian"], [50.0])
 
     plt.show()

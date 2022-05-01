@@ -5,7 +5,7 @@ from typing import Tuple, List
 import numpy as np
 from matplotlib import pyplot as plt
 from pycsou.core import LinearOperator
-from pycsou.linop import Gradient, Laplacian, IdentityOperator
+from pycsou.linop import Gradient, Laplacian
 from scipy.stats import wasserstein_distance
 
 from src import SparseSmoothSignal
@@ -28,8 +28,7 @@ def nmse(x1: np.ndarray, x2: np.ndarray) -> float:
     float
        NMSE between x1 and x2
     """
-    np.sum()
-    return np.sqrt(np.mean((x1 - x2) ** 2) / np.mean(x1 ** 2))
+    return np.mean((x1 - x2) ** 2) / np.mean(x1 ** 2)
 
 
 def wasserstein_dist(x1: np.ndarray, x2: np.ndarray) -> float:
@@ -54,7 +53,7 @@ def wasserstein_dist(x1: np.ndarray, x2: np.ndarray) -> float:
 def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) -> LinearOperator:
     """
     Gives the operator used for the L2 penalty term in the solver.
-    Used to get frequently used operator by the their name
+    Used to get frequently used operator by their name
 
     Parameters
     ----------
@@ -81,25 +80,6 @@ def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) ->
         return op
     else:
         return op_l2
-
-
-def get_low_freq_operator(dim: Tuple[int, int], L: float) -> MyMatrixFreeOperator:
-    """
-    Get a MyMatrixFreeOperator with more low frequency measurements
-
-    Parameters
-    ----------
-    dim : Tuple[int, int]
-        Dimension of the image
-    L : float
-        Number of lines we want to keep in percentage between 0 and 1
-
-    Returns
-    -------
-    MyMatrixFreeOperator
-        MyMatrixFreeOperator with L% of measurements
-    """
-    return MyMatrixFreeOperator(dim, random_low_freq_lines(dim, int(L * dim[0] * dim[1])))
 
 
 def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
@@ -158,6 +138,66 @@ def random_low_freq_lines(dim: Tuple[int, int], size: int) -> np.ndarray:
     points = random_points(dim, size)
     index = points[:, 0] + points[:, 1] * dim[0]
     return index
+
+
+def get_low_freq_operator(dim: Tuple[int, int], L: float) -> MyMatrixFreeOperator:
+    """
+    Get a MyMatrixFreeOperator with more low frequency measurements
+
+    Parameters
+    ----------
+    dim : Tuple[int, int]
+        Dimension of the image
+    L : float
+        Number of measurements in percentage between 0 and 1
+
+    Returns
+    -------
+    MyMatrixFreeOperator
+        MyMatrixFreeOperator with L% of measurements
+    """
+    return MyMatrixFreeOperator(dim, random_low_freq_lines(dim, int(L * dim[0] * dim[1])))
+
+
+def get_best_lines(s: SparseSmoothSignal, L: float) -> np.ndarray:
+    """
+    Generates a list of lines index
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    L : float
+        Number of measurements in percentage between 0 and 1
+
+    Returns
+    -------
+    np.ndarray
+        Lines to keep as an array of index
+    """
+    y = np.abs(np.fft.fft2(s.x)).ravel()
+    y[0] = 0
+    return np.sort(np.argsort(y)[-int(L * s.dim[0] * s.dim[1]):])
+
+
+def get_best_freq_operator(s: SparseSmoothSignal, L: float) -> MyMatrixFreeOperator:
+    """
+    Get a MyMatrixFreeOperator with the best frequency measurements, taken as the highest fourier coefficient of
+    our simulated signal
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal
+    L : float
+        Number of measurements in percentage between 0 and 1
+
+    Returns
+    -------
+    MyMatrixFreeOperator
+        MyMatrixFreeOperator with L% of measurements
+    """
+    return MyMatrixFreeOperator(s.dim, get_best_lines(s, L))
 
 
 def plot_solvers(x: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso: np.ndarray, name: str = "",
@@ -255,9 +295,9 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     cbar = fig.colorbar(im_p, cax=cb_ax)
 
 
-def plot_3_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x1_sparse: np.ndarray, x1_smooth: np.ndarray,
-                          x2_sparse: np.ndarray, x2_smooth: np.ndarray, x3_sparse: np.ndarray, x3_smooth: np.ndarray,
-                          name: str = "") -> None:
+def plot_reconstruction_measurements(x_sparse: np.ndarray, x_smooth: np.ndarray, x1_sparse: np.ndarray, x1_smooth: np.ndarray,
+                                     x2_sparse: np.ndarray, x2_smooth: np.ndarray, x3_sparse: np.ndarray, x3_smooth: np.ndarray,
+                                     name: str = "") -> None:
     """
     Plot the original image signal and 3 reconstruction made with different measurements
 
@@ -468,21 +508,3 @@ def peaks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarra
     peaks = np.argwhere(sp1 >= 2)
     intensity = sp2[peaks] / sp1[peaks]
     print(f"Mean intensity of the reconstructed peaks : {np.mean(intensity):.1%}")
-
-
-def get_best_lines(s: SparseSmoothSignal, L: float):
-    """
-    #TODO
-
-    Parameters
-    ----------
-    s
-    L
-
-    Returns
-    -------
-
-    """
-    y = np.abs(np.fft.fft2(s.x)).ravel()
-    y[0] = 0
-    return np.sort(np.argsort(y)[-int(L * s.dim[0] * s.dim[1]):])
