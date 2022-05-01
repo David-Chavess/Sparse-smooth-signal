@@ -30,6 +30,7 @@ def off_set_smooth(smooth: np.ndarray, x_smooth: np.ndarray) -> np.ndarray:
 def print_best(loss_x1: Dict, loss_x2: Dict) -> None:
     """
     Print the loss for each component
+    #TODO
 
     Parameters
     ----------
@@ -170,14 +171,13 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
     for op in operators_l2:
         op_l2 = get_L2_operator(s.dim, op)
         for p in psnr:
-            s.gaussian_noise(p)
+            s.psnr = psnr
             for l1 in lambdas1:
                 for l2 in lambdas2:
                     name = f"λ1:{l1:.2f}, λ2:{l2:.2f}, {L:.1%} measurements, PSNR:{p:.0f}, L2 operator:{op.__str__()}"
                     x1, x2 = solve(s, l1, l2, op_l2)
                     loss_x1[name] = wasserstein_dist(s.sparse, x1)
                     loss_x2[name] = nmse(s.smooth, x2)
-                    peaks_found(s.sparse, x1, 1)
                     plot_reconstruction(s.sparse, s.smooth, x1, x2, name)
 
     print_best(loss_x1, loss_x2)
@@ -211,7 +211,7 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
     threshold : float
         Threshold used in plot_peaks to count the number of peaks recovered
     """
-    s.gaussian_noise(psnr)
+    s.psnr = psnr
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
     loss_x1 = []
@@ -232,7 +232,7 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
     plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "λ1")
 
 
-def test_lambda2(s: SparseSmoothSignal, lambda2_min: float, lambda2_max: float, nb: int, L: float, lambda1: float,
+def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_max: float, nb: int, lambda1: float,
                  operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.,
                  threshold: float = 1.) -> None:
     """
@@ -260,7 +260,7 @@ def test_lambda2(s: SparseSmoothSignal, lambda2_min: float, lambda2_max: float, 
     threshold : float
         Threshold used in plot_peaks to count the number of peaks recovered
     """
-    s.gaussian_noise(psnr)
+    s.psnr = psnr
     op_l2 = get_L2_operator(s.dim, operator_l2)
 
     loss_x1 = []
@@ -323,8 +323,10 @@ def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: flo
     operator_l2 : None | str | LinearOperator
         Operator used in the L2 penalty
     """
-    s.gaussian_noise(psnr)
+    s.psnr = psnr
     l2_op = get_L2_operator(s.dim, operator_l2)
+
+    H = s.H
 
     s.H = get_best_freq_operator(s, L)
     x1_best, x2_best = solve(s, lambda1, lambda2, l2_op)
@@ -335,28 +337,34 @@ def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: flo
     s.H = get_low_freq_operator(s.dim, L)
     x1_low, x2_low = solve(s, lambda1, lambda2, l2_op)
 
+    s.H = H
+
     name = f"λ1:{lambda1:.2f}, λ2:{lambda2:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     plot_reconstruction_measurements(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_low, x2_low, name)
 
 
-if __name__ == '__main__':
-    d = (128, 128)
-    seed = 11
-    s1 = SparseSmoothSignal(d)
-    s1.random_sparse(seed)
-    s1.random_smooth(seed)
-    L = 0.1
-    l1 = 0.02
-    l2 = 0.2
-    psnr = 50.
-    s1.psnr = psnr
-    s1.H = get_best_freq_operator(s1, L)
+# if __name__ == '__main__':
+#     d = (128, 128)
+#     seed = 11
+#     s1 = SparseSmoothSignal(d)
+#     s1.random_sparse(seed)
+#     s1.random_smooth(seed)
+#     L = 0.1
+#     l1 = 0.02
+#     l2 = 0.2
+#     psnr = 50.
+#     s1.psnr = psnr
+#     s1.H = get_best_freq_operator(s1, L)
 
-    # compare_choice_of_measurements(s1, L, l1, l2, psnr, "Gradient")
+    # compare_choice_of_measurements(s1, L, l1, l2, psnr, "Laplacian")
     # compare_smoothing_operator(s1)
 
     # test_lambda1(s1, L, 0.001, 0.1, 10, 0.2, "Laplacian", psnr, 1)
 
-    test_hyperparameters(s1, L, [0.01, 0.02, 0.05], [0.1, 0.2], ["Laplacian"], [50.0])
+    # print(f"Peaks in the original image : {len(peaks)}")
+    # print(f"Peaks found : {found}")
+    # print(f"Wrong peaks found : {wrong_peak}")
 
-    plt.show()
+    # test_hyperparameters(s1, L, [0.01, 0.02, 0.05], [0.1, 0.2], ["Laplacian"], [50.0])
+
+    # s1.show()

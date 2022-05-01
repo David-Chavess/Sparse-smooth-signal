@@ -484,9 +484,6 @@ def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, t
     peaks = np.argwhere(sp1 >= 2)
     found = np.sum(sp2[peaks] > threshold)
     wrong_peak = np.sum(sp2 > threshold) - found
-    print(f"Peaks in the original image : {len(peaks)}")
-    print(f"Peaks found : {found}")
-    print(f"Wrong peaks found : {wrong_peak}")
     return found, wrong_peak
 
 

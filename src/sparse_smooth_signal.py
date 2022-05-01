@@ -21,9 +21,9 @@ class SparseSmoothSignal:
     """
 
     # Define the values that our simulated signal can take
-    MIN_SPARSE_AMPLITUDE = 2.
-    MAX_SPARSE_AMPLITUDE = 6.
-    MAX_SMOOTH_AMPLITUDE = 2.
+    MIN_SPARSE_AMPLITUDE: float = 2.
+    MAX_SPARSE_AMPLITUDE: float = 6.
+    MAX_SMOOTH_AMPLITUDE: float = 2.
 
     def __init__(self, dim: Tuple[int, int],
                  sparse: None | np.ndarray = None,
