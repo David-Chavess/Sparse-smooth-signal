@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Dict
 
+import numpy as np
+
 from src import SparseSmoothSignal
 from src.lasso_solver import LassoSolver
 from src.sparse_smooth_solver import SparseSmoothSolver
@@ -11,7 +13,7 @@ from src.util import *
 
 def off_set_smooth(smooth: np.ndarray, x_smooth: np.ndarray) -> np.ndarray:
     """
-    Offset the smooth reconstruction because the reconstruction is 0-mean
+    Offset the smooth reconstruction because the reconstruction is 0-mean.
 
     Parameters
     ----------
@@ -22,24 +24,22 @@ def off_set_smooth(smooth: np.ndarray, x_smooth: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    The offset values
+    np.ndarray
+        The offset values
     """
     return np.mean(smooth) - np.mean(x_smooth)
 
 
 def print_best(loss_x1: Dict, loss_x2: Dict) -> None:
     """
-    Print the loss for each component
-    #TODO
+    Print the loss for each component of the reconstructed for different set of parameters.
 
     Parameters
     ----------
     loss_x1 : Dict
+        Loss of the sparse component for each set of parameters
     loss_x2 : Dict
-
-    Returns
-    -------
-
+        Loss of the smooth component for each set of parameters
     """
     print("Sparse:")
     for x in sorted(loss_x1, key=loss_x1.get):
@@ -51,7 +51,7 @@ def print_best(loss_x1: Dict, loss_x2: Dict) -> None:
 
 def solve(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Solve the inverse problem for a simulated signal s
+    Solve the inverse problem for a simulated signal s.
 
     Parameters
     ----------
@@ -136,20 +136,16 @@ def solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
     plot_solvers(x_sparse + x_smooth, x_tik, x_tik_op, x_lasso, name)
 
     peaks_found(s.sparse, x_sparse, 1)
-    peaks_intensity(s.sparse, x_sparse)
     peaks_found(s.sparse, x_tik, 1)
-    peaks_intensity(s.sparse, x_tik)
     peaks_found(s.sparse, x_tik_op, 1)
-    peaks_intensity(s.sparse, x_tik_op)
     peaks_found(s.sparse, x_lasso, 1)
-    peaks_intensity(s.sparse, x_lasso)
     return x_sparse, x_smooth, x_tik, x_tik_op, x_lasso
 
 
 def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float], lambdas2: List[float],
                          operators_l2: List[None | str | LinearOperator], psnr: List[float]) -> None:
     """
-    Solve and plot all reconstruction made by the combination of all the parameters
+    Solve and plot all reconstruction made by the combination of all the parameters.
 
     Parameters
     ----------
@@ -283,7 +279,8 @@ def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_ma
 
 def compare_smoothing_operator(s: SparseSmoothSignal) -> None:
     """
-    Compare the reconstructions using the Gradient, the Laplacian and no operator in the L2 penalty with the original signal
+    Compare the reconstructions using the Gradient, the Laplacian and no operator in the L2 penalty with the original
+    signal.
 
     Parameters
     ----------
@@ -343,18 +340,19 @@ def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: flo
     plot_reconstruction_measurements(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_low, x2_low, name)
 
 
-# if __name__ == '__main__':
-#     d = (128, 128)
-#     seed = 11
-#     s1 = SparseSmoothSignal(d)
-#     s1.random_sparse(seed)
-#     s1.random_smooth(seed)
-#     L = 0.1
-#     l1 = 0.02
-#     l2 = 0.2
-#     psnr = 50.
-#     s1.psnr = psnr
-#     s1.H = get_best_freq_operator(s1, L)
+if __name__ == '__main__':
+    d = (128, 128)
+    seed = 11
+    s1 = SparseSmoothSignal(d)
+    s1.random_sparse(seed)
+    s1.random_smooth(seed)
+    L = 0.1
+    l1 = 0.02
+    l2 = 0.1
+    psnr = 50.
+    s1.psnr = psnr
+    op_l2 = get_L2_operator(d, "Laplacian")
+    #s1.H = get_best_freq_operator(s1, L)
 
     # compare_choice_of_measurements(s1, L, l1, l2, psnr, "Laplacian")
     # compare_smoothing_operator(s1)
@@ -367,4 +365,4 @@ def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: flo
 
     # test_hyperparameters(s1, L, [0.01, 0.02, 0.05], [0.1, 0.2], ["Laplacian"], [50.0])
 
-    # s1.show()
+    s1.show()

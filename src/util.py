@@ -402,14 +402,14 @@ def plot_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray,
     cbar = fig.colorbar(im, cax=cb_ax)
 
 
-def plot_loss(x: List[float], loss_sparse: List[float], loss_smooth: List[float], name: str = "", var: str = ""):
+def plot_loss(x: np.ndarray, loss_sparse: List[float], loss_smooth: List[float], name: str = "", var: str = ""):
     """
     Plot the loss between the original image and the reconstructed one for all value in x. The loss is done with the
-     Wasserstein distance for the sparse component and NMSE for the smooth one.
+    Wasserstein distance for the sparse component and NMSE for the smooth one.
 
     Parameters
     ----------
-    x :  List[float]
+    x :  np.ndarray
         Points of the x axe at which we computed the loss
     loss_sparse :  List[float]
         Wasserstein distance of the sparse component
@@ -435,23 +435,25 @@ def plot_loss(x: List[float], loss_sparse: List[float], loss_smooth: List[float]
     ax2.set_title("L2 loss")
 
 
-def plot_peaks(x, nb_peaks, peak_found, wrong_peaks_found, threshold: float, var: str = ""):
+def plot_peaks(x: np.ndarray, nb_peaks: float, peak_found: np.ndarray, wrong_peaks_found: np.ndarray,
+               threshold: float, var: str = "") -> None:
     """
-    Plot the "peaks" we can recover in the sparse component.
-    #TODO
+    Plot the numbers of "peaks" we can recover in the sparse component at each value of x.
 
     Parameters
     ----------
-    x
-    nb_peaks
-    peak_found
-    wrong_peaks_found
-    threshold
-    var
-
-    Returns
-    -------
-
+    x : np.ndarray
+        Points of the x axe
+    nb_peaks : float
+        Number of "peak" in the original sparse component
+    peak_found : np.ndarray
+        Number of "peak" found
+    wrong_peaks_found : np.ndarray
+        Number of "peak" found that are not in the original sparse component
+    threshold :
+        Threshold used to determine if there is a "peak"
+    var : str
+        Name of the variable we test
     """
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
     fig.canvas.manager.set_window_title(f'Recovered peak comparison')
@@ -465,19 +467,25 @@ def plot_peaks(x, nb_peaks, peak_found, wrong_peaks_found, threshold: float, var
     ax.legend()
 
 
-def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, threshold: float = 0.75):
+def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, threshold: float = 0.75) \
+        -> (np.ndarray, np.ndarray):
     """
-    #TODO
+    Compute the number of "peaks" found in the reconstructed sparse that are in the original and the number of "wrong
+    peak" found that are not in the original signal.
 
     Parameters
     ----------
-    original_sparse
-    reconstructed_sparse
-    threshold
+    original_sparse : np.ndarray
+        Original sparse component
+    reconstructed_sparse : np.ndarray
+        Reconstructed sparse component
+    threshold : float
+        Threshold used to determine if there is a "peak"
 
     Returns
     -------
-
+    (np.ndarray, np.ndarray)
+        The number of "peaks" and the number of "wrong peaks"
     """
     sp1 = original_sparse.ravel()
     sp2 = reconstructed_sparse.ravel()
@@ -485,23 +493,3 @@ def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, t
     found = np.sum(sp2[peaks] > threshold)
     wrong_peak = np.sum(sp2 > threshold) - found
     return found, wrong_peak
-
-
-def peaks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray):
-    """
-    #TODO
-
-    Parameters
-    ----------
-    original_sparse
-    reconstructed_sparse
-
-    Returns
-    -------
-
-    """
-    sp1 = original_sparse.ravel()
-    sp2 = reconstructed_sparse.ravel()
-    peaks = np.argwhere(sp1 >= 2)
-    intensity = sp2[peaks] / sp1[peaks]
-    print(f"Mean intensity of the reconstructed peaks : {np.mean(intensity):.1%}")
