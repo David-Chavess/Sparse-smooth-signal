@@ -152,7 +152,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
     s : SparseSmoothSignal
         Simulated signal to reconstruct
     L : float
-        Number of measurements
+        Number of measurements in percentage between 0 and 1
     lambdas1 : List[float]
         Weights of the L1 penalty
     lambdas2 : List[float]
@@ -191,7 +191,7 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
     s : SparseSmoothSignal
         Simulated signal to reconstruct
     L : float
-        Number of measurements
+        Number of measurements in percentage between 0 and 1
     lambda1_min : float
         Minimum value of λ1
     lambda1_max : float
@@ -240,7 +240,7 @@ def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_ma
     s : SparseSmoothSignal
         Simulated signal to reconstruct
     L : float
-        Number of measurements
+        Number of measurements in percentage between 0 and 1
     lambda2_min : float
         Minimum value of λ2
     lambda2_max : float
@@ -310,7 +310,7 @@ def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: flo
     s : SparseSmoothSignal
         Simulated signal to reconstruct
     L : float
-        Number of measurements
+        Number of measurements in percentage between 0 and 1
     lambda1 : float
         Weight of the L1 penalty
     lambda2 : float
@@ -348,12 +348,13 @@ if __name__ == '__main__':
     s1.random_smooth(seed)
     L = 0.1
     l1 = 0.02
-    l2 = 0.1
+    l2 = 0.06
     psnr = 50.
     s1.psnr = psnr
     op_l2 = get_L2_operator(d, "Laplacian")
-    #s1.H = get_best_freq_operator(s1, L)
+    s1.H = get_low_freq_operator(d, L)
 
+    # plot_sampling(s1, L)
     # compare_choice_of_measurements(s1, L, l1, l2, psnr, "Laplacian")
     # compare_smoothing_operator(s1)
 

@@ -84,7 +84,7 @@ def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) ->
 
 def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
     """
-    Generates random 2d discrete point from a gaussian
+    Generates random 2d discrete point around (0, 0) from a gaussian distribution
 
     Parameters
     ----------
@@ -98,16 +98,17 @@ def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
     np.ndarray
         Array of 2d points
     """
+    assert size < dim[0] * dim[1]
     points = set()
 
     while len(points) < size:
         # 2d Gaussian
-        p = np.abs(np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], size - len(points) + 1))
-        p /= np.max(p)
+        p = np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], size - len(points) + 1)
+        p /= np.max(np.abs(p))
 
         # Cast to index
-        p[:, 0] *= dim[0] - 1
-        p[:, 1] *= dim[1] - 1
+        p[:, 0] *= dim[0] / 2 - 1
+        p[:, 1] *= dim[1] / 2 - 1
 
         # Add to set as int types
         s = set(map(tuple, p.astype((int, int))))
@@ -121,7 +122,8 @@ def random_points(dim: Tuple[int, int], size: int) -> np.ndarray:
 
 def random_low_freq_lines(dim: Tuple[int, int], size: int) -> np.ndarray:
     """
-    Generates a list of lines index from random_points()
+    Generates a list of lines index where half are from random_points() and the other half is uniform. Used to sample
+    low frequency more often.
 
     Parameters
     ----------
@@ -135,9 +137,13 @@ def random_low_freq_lines(dim: Tuple[int, int], size: int) -> np.ndarray:
     np.ndarray
         Lines to keep as an array of index
     """
-    points = random_points(dim, size)
+    points = random_points(dim, int(3 * size / 4))
     index = points[:, 0] + points[:, 1] * dim[0]
-    return index
+    index = np.concatenate([np.mod(index, dim[0] * dim[1]), np.random.choice(np.setdiff1d(np.arange(1, dim[0] * dim[1]),
+                                                                                          np.mod(index, dim[0] * dim[1]),
+                                                                                          True),
+                                                                             int(size / 4), False)])
+    return np.sort(index)
 
 
 def get_low_freq_operator(dim: Tuple[int, int], L: float) -> MyMatrixFreeOperator:
@@ -271,7 +277,8 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
-    im_p = ax1.imshow(x_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im_p = ax1.imshow(x_sparse, vmin=0,
+                      vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax1.axis('off')
     ax1.set_title("Original Sparse")
 
@@ -279,7 +286,8 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     ax2.axis('off')
     ax2.set_title("Original Smooth")
 
-    im = ax3.imshow(x_reconst_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im = ax3.imshow(x_reconst_sparse, vmin=0,
+                    vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax3.axis('off')
     ax3.set_title("Reconstructed Sparse")
 
@@ -295,8 +303,10 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     cbar = fig.colorbar(im_p, cax=cb_ax)
 
 
-def plot_reconstruction_measurements(x_sparse: np.ndarray, x_smooth: np.ndarray, x1_sparse: np.ndarray, x1_smooth: np.ndarray,
-                                     x2_sparse: np.ndarray, x2_smooth: np.ndarray, x3_sparse: np.ndarray, x3_smooth: np.ndarray,
+def plot_reconstruction_measurements(x_sparse: np.ndarray, x_smooth: np.ndarray, x1_sparse: np.ndarray,
+                                     x1_smooth: np.ndarray,
+                                     x2_sparse: np.ndarray, x2_smooth: np.ndarray, x3_sparse: np.ndarray,
+                                     x3_smooth: np.ndarray,
                                      name: str = "") -> None:
     """
     Plot the original image signal and 3 reconstruction made with different measurements
@@ -326,19 +336,23 @@ def plot_reconstruction_measurements(x_sparse: np.ndarray, x_smooth: np.ndarray,
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
-    im_p = ax1.imshow(x_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im_p = ax1.imshow(x_sparse, vmin=0,
+                      vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax1.axis('off')
     ax1.set_title("Original")
 
-    im = ax2.imshow(x1_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im = ax2.imshow(x1_sparse, vmin=0,
+                    vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax2.axis('off')
     ax2.set_title("Best choose")
 
-    im = ax3.imshow(x2_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im = ax3.imshow(x2_sparse, vmin=0,
+                    vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax3.axis('off')
     ax3.set_title("Random")
 
-    im = ax4.imshow(x3_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im = ax4.imshow(x3_sparse, vmin=0,
+                    vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax4.axis('off')
     ax4.set_title("Random with more low frequency")
 
@@ -493,3 +507,34 @@ def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, t
     found = np.sum(sp2[peaks] > threshold)
     wrong_peak = np.sum(sp2 > threshold) - found
     return found, wrong_peak
+
+
+def plot_sampling(s: SparseSmoothSignal, L: float):
+    """
+    Plot the different frequency sampling methods used
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal
+    L : float
+        Number of measurements in percentage between 0 and 1
+    """
+    _, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4)
+
+    y = np.abs(np.fft.fft2(s.smooth, norm='ortho'))
+    y[0, 0] = 0
+    ax1.imshow(y)
+
+    y = np.zeros(s.dim).ravel()
+    y[get_best_lines(s, L)] = 1
+    ax2.imshow(y.reshape(s.dim))
+
+    y = np.zeros(s.dim).ravel()
+    op = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
+    y[op.rand_lines] = 1
+    ax3.imshow(y.reshape(s.dim))
+
+    y = np.zeros(s.dim).ravel()
+    y[random_low_freq_lines(s.dim, int(L * s.dim[0] * s.dim[1]))] = 1
+    ax4.imshow(y.reshape(s.dim))
