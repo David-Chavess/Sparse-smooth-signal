@@ -509,9 +509,9 @@ def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, t
     return found, wrong_peak
 
 
-def plot_sampling(s: SparseSmoothSignal, L: float):
+def plot_sampling_methods(s: SparseSmoothSignal, L: float):
     """
-    Plot the different frequency sampling methods used
+    Plot the different frequency sampling methods used.
 
     Parameters
     ----------
@@ -520,21 +520,33 @@ def plot_sampling(s: SparseSmoothSignal, L: float):
     L : float
         Number of measurements in percentage between 0 and 1
     """
-    _, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
+    fig.canvas.manager.set_window_title(f'Sampling methods comparison')
 
     y = np.abs(np.fft.fft2(s.smooth, norm='ortho'))
     y[0, 0] = 0
-    ax1.imshow(y)
+    ax1.imshow(np.fft.fftshift(y))
+    ax1.axis('off')
+    ax1.set_title("Fourier Transform")
 
     y = np.zeros(s.dim).ravel()
     y[get_best_lines(s, L)] = 1
-    ax2.imshow(y.reshape(s.dim))
+    ax2.imshow(np.fft.fftshift(y.reshape(s.dim)), cmap='magma')
+    ax2.axis('off')
+    ax2.set_title("Highest Fourier coefficient")
 
     y = np.zeros(s.dim).ravel()
     op = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
     y[op.rand_lines] = 1
-    ax3.imshow(y.reshape(s.dim))
+    ax3.imshow(np.fft.fftshift(y.reshape(s.dim)), cmap='magma')
+    ax3.axis('off')
+    ax3.set_title("Random uniform")
 
     y = np.zeros(s.dim).ravel()
     y[random_low_freq_lines(s.dim, int(L * s.dim[0] * s.dim[1]))] = 1
-    ax4.imshow(y.reshape(s.dim))
+    ax4.imshow(np.fft.fftshift(y.reshape(s.dim)), cmap='magma')
+    ax4.axis('off')
+    ax4.set_title("Random Gaussian + Uniform")
+
+    fig.subplots_adjust(bottom=0.05, top=0.95, left=0.01, right=0.99,
+                        wspace=0.1, hspace=0.1)
