@@ -273,7 +273,10 @@ class SparseSmoothSignal:
         if size == -1:
             size = self.__size
 
-        rand = np.sort(np.random.choice(np.arange(1, self.__size, dtype=int), size, replace=False))
+        if size == self.__size:
+            rand = np.sort(np.random.choice(np.arange(self.__size, dtype=int), size, replace=False))
+        else:
+            rand = np.sort(np.random.choice(np.arange(1, self.__size, dtype=int), size, replace=False))
         self.random_lines = rand
 
     def gaussian_noise(self, psnr: float) -> None:

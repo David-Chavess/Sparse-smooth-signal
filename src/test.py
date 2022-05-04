@@ -64,6 +64,12 @@ class Test:
         assert np.allclose(free_op.pinv(y), free_op.adjoint(y))
         assert np.allclose(free_op.adjoint(y), free_op.transpose(np.conj(y)).real)
 
+        x = np.random.random(self.dim[0]*self.dim[1])
+        L = int(0.1 * self.dim[0] * self.dim[1])
+        z = np.random.random((L, 2)).view(np.complex128).ravel()
+        free_op = MyMatrixFreeOperator(self.dim, L)
+        assert np.allclose(np.vdot(z, free_op(x)).real, np.vdot(free_op.adjoint(z), x))
+
 
 if __name__ == '__main__':
     test = Test()
