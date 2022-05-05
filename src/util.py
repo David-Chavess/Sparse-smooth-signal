@@ -509,6 +509,28 @@ def peaks_found(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray, t
     return found, wrong_peak
 
 
+def peaks_intensity(original_sparse: np.ndarray, reconstructed_sparse: np.ndarray) -> float:
+    """
+    Compute the intensity of the recovered "peaks" compare to the original. It tells how much intensity is lost
+
+    Parameters
+    ----------
+    original_sparse : np.ndarray
+        Original sparse component
+    reconstructed_sparse : np.ndarray
+        Reconstructed sparse component
+    Returns
+    -------
+    float
+        The intensity of the recovered "peaks" in percentage
+    """
+    sp1 = original_sparse.ravel()
+    sp2 = reconstructed_sparse.ravel()
+    peaks = np.argwhere(sp1 >= SparseSmoothSignal.MIN_SPARSE_AMPLITUDE)
+    intensity = sp2[peaks] / sp1[peaks]
+    return float(np.mean(intensity))
+
+
 def plot_sampling_methods(s: SparseSmoothSignal, L: float):
     """
     Plot the different frequency sampling methods used.

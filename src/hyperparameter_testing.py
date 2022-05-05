@@ -327,12 +327,18 @@ def compare_measurements_methods(s: SparseSmoothSignal, L: float, lambda1: float
 
     s.H = get_best_freq_operator(s, L)
     x1_best, x2_best = solve(s, lambda1, lambda2, l2_op)
+    intensity = peaks_intensity(s.sparse, x1_best)
+    print(f"Mean intensity of the reconstructed peaks (Highest Fourier coefficient) : {np.mean(intensity):.1%}")
 
     s.H = MyMatrixFreeOperator(s.dim, int(L * s.dim[0] * s.dim[1]))
     x1_random, x2_random = solve(s, lambda1, lambda2, l2_op)
+    intensity = peaks_intensity(s.sparse, x1_random)
+    print(f"Mean intensity of the reconstructed peaks (Random uniform) : {np.mean(intensity):.1%}")
 
     s.H = get_low_freq_operator(s.dim, L)
     x1_low, x2_low = solve(s, lambda1, lambda2, l2_op)
+    intensity = peaks_intensity(s.sparse, x1_low)
+    print(f"Mean intensity of the reconstructed peaks (Random Gaussian + Uniform) : {np.mean(intensity):.1%}")
 
     s.H = H
 
