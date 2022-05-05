@@ -205,6 +205,7 @@ class SparseSmoothSignal:
         self.__psnr = value
         # delete deprecated cached values
         self.__noise = None
+        self.__y = None
 
     def random_sparse(self, seed: None | int = None) -> None:
         """
