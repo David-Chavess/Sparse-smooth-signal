@@ -344,17 +344,17 @@ def plot_reconstruction_measurements(x_sparse: np.ndarray, x_smooth: np.ndarray,
     im = ax2.imshow(x1_sparse, vmin=0,
                     vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax2.axis('off')
-    ax2.set_title("Best choose")
+    ax2.set_title("Highest Fourier coefficient")
 
     im = ax3.imshow(x2_sparse, vmin=0,
                     vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax3.axis('off')
-    ax3.set_title("Random")
+    ax3.set_title("Random uniform")
 
     im = ax4.imshow(x3_sparse, vmin=0,
                     vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax4.axis('off')
-    ax4.set_title("Random with more low frequency")
+    ax4.set_title("Random Gaussian + Uniform")
 
     im_s = ax5.imshow(x_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax5.axis('off')
@@ -398,7 +398,7 @@ def plot_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray,
     ax1.axis('off')
     ax1.set_title("Original Smooth")
 
-    im = ax2.imshow(x_None)
+    im = ax2.imshow(x_None, vmin=0)
     ax2.axis('off')
     ax2.set_title("Smooth without operator")
 
@@ -523,7 +523,7 @@ def plot_sampling_methods(s: SparseSmoothSignal, L: float):
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
     fig.canvas.manager.set_window_title(f'Sampling methods comparison')
 
-    y = np.abs(np.fft.fft2(s.smooth, norm='ortho'))
+    y = np.abs(np.fft.fft2(s.x, norm='ortho'))
     y[0, 0] = 0
     ax1.imshow(np.fft.fftshift(y))
     ax1.axis('off')

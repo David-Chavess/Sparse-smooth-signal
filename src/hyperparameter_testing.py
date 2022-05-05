@@ -77,7 +77,7 @@ def solve(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator
     x2 = x2.reshape(s.dim)
 
     x1[x1 < 0] = 0
-    x2 += off_set_smooth(s.smooth, x2)
+    # x2 += off_set_smooth(s.smooth, x2)
 
     return x1, x2
 
@@ -288,20 +288,20 @@ def compare_smoothing_operator(s: SparseSmoothSignal) -> None:
         Simulated signal to reconstruct
     """
     lambda1 = 0.1
-    lambda2 = 0.1
+    lambda2 = 0.05
 
     _, s_None = solve(s, lambda1, lambda2, None)
 
-    lambda1 = 0.01
-    lambda2 = 0.1
+    lambda1 = 0.02
+    lambda2 = 0.05
     _, s_G = solve(s, lambda1, lambda2, get_L2_operator(s.dim, "Gradient"))
     _, s_L = solve(s, lambda1, lambda2, get_L2_operator(s.dim, "Laplacian"))
 
     plot_smooth(s.smooth, s_None, s_G, s_L)
 
 
-def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: float, lambda2: float, psnr: float,
-                                   operator_l2: None | str | LinearOperator = "Laplacian") -> None:
+def compare_measurements_methods(s: SparseSmoothSignal, L: float, lambda1: float, lambda2: float, psnr: float,
+                                 operator_l2: None | str | LinearOperator = "Laplacian") -> None:
     """
     Compare the reconstructions using different choice of measurements with the original signal.
 
@@ -338,32 +338,3 @@ def compare_choice_of_measurements(s: SparseSmoothSignal, L: float, lambda1: flo
 
     name = f"λ1:{lambda1:.2f}, λ2:{lambda2:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     plot_reconstruction_measurements(s.sparse, s.smooth, x1_best, x2_best, x1_random, x2_random, x1_low, x2_low, name)
-
-
-if __name__ == '__main__':
-    d = (128, 128)
-    seed = 11
-    s1 = SparseSmoothSignal(d)
-    s1.random_sparse(seed)
-    s1.random_smooth(seed)
-    L = 0.1
-    l1 = 0.02
-    l2 = 0.06
-    psnr = 50.
-    s1.psnr = psnr
-    op_l2 = get_L2_operator(d, "Laplacian")
-    s1.H = get_low_freq_operator(d, L)
-
-    # plot_sampling(s1, L)
-    # compare_choice_of_measurements(s1, L, l1, l2, psnr, "Laplacian")
-    # compare_smoothing_operator(s1)
-
-    # test_lambda1(s1, L, 0.001, 0.1, 10, 0.2, "Laplacian", psnr, 1)
-
-    # print(f"Peaks in the original image : {len(peaks)}")
-    # print(f"Peaks found : {found}")
-    # print(f"Wrong peaks found : {wrong_peak}")
-
-    # test_hyperparameters(s1, L, [0.01, 0.02, 0.05], [0.1, 0.2], ["Laplacian"], [50.0])
-
-    s1.show()
