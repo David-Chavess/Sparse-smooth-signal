@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from pycsou.core import LinearOperator
 from pycsou.func import SquaredL2Loss, DiffFuncHStack, NullDifferentiableFunctional, NullProximableFunctional, \
-    ProxFuncHStack, L1Norm, SquaredL2Norm
+    ProxFuncHStack, L1Norm, SquaredL2Norm, NonNegativeOrthant
 from pycsou.linop import LinOpHStack
 from pycsou.opt import APGD
 
@@ -60,7 +60,7 @@ class SparseSmoothSolver(Solver):
         if self.lambda1 == 0.0:
             G = NullProximableFunctional(2*H.shape[1])
         else:
-            G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]), n_jobs=-1)
+            G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NonNegativeOrthant(H.shape[1]), n_jobs=-1)
 
         apgd = APGD(2 * self.operator.shape[1], F=F, G=G, acceleration='CD', verbose=None)
         estimate, converged, diagnostics = apgd.iterate()
