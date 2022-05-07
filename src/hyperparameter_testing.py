@@ -179,9 +179,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
     print_best(loss_x1, loss_x2)
 
 
-def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_max: float, nb: int, lambda2: float,
-                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.,
-                 threshold: float = 1.) -> None:
+def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_max: float, nb: int, lambda2: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.) -> None:
     """
     Test the lambda1 parameter of some fix parameters. It makes nb reconstructions and plot the loss of each
     component. It also plots the number of peaks recovered in the sparse component.
@@ -198,8 +196,8 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
         Maximum value of λ1
     nb : int
         Number of reconstructions made
-    lambda2 : float
-        Weight of the L2 penalty
+    lambda2 : float | None
+        Weight of the L2 penalty, if None use lambda2 = 5 * lambda1
     operator_l2 : None | str | LinearOperator
         Operator used in the L2 penalty
     psnr : float
@@ -212,25 +210,52 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
 
     loss_x1 = []
     loss_x2 = []
-    peaks = []
+    nb_peaks_found = []
+
+    # We sample a few peaks and a few non-peaks
+    peaks = np.empty((nb, 25))
+    non_peaks = np.empty((nb, 100))
+    samples_peaks = np.argwhere(s.sparse.ravel() > SparseSmoothSignal.MIN_SPARSE_AMPLITUDE).ravel()
+    samples_peaks = np.random.choice(samples_peaks, size=25, replace=False)
+    samples_non_peaks = np.argwhere(s.sparse.ravel() < SparseSmoothSignal.MIN_SPARSE_AMPLITUDE).ravel()
+    samples_non_peaks = np.random.choice(samples_non_peaks, size=100, replace=False)
+
     lambdas = np.linspace(lambda1_min, lambda1_max, nb)
-    for l in lambdas:
-        x1, x2 = solve(s, l, lambda2, op_l2)
+    for i, l in enumerate(lambdas):
+        if lambda2 is None:
+            x1, x2 = solve(s, l, 5 * l, op_l2)
+        else:
+            x1, x2 = solve(s, l, lambda2, op_l2)
         loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
-        peaks.append(peaks_found(s.sparse, x1, 1))
+        nb_peaks_found.append(peaks_found(s.sparse, x1, 1))
+        peaks[i] = x1.ravel()[samples_peaks]
+        non_peaks[i] = x1.ravel()[samples_non_peaks]
 
-    name = f"λ2:{lambda2:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    if lambda2 is None:
+        name = f"λ2: 5*λ1, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    else:
+        name = f"λ2:{lambda2:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     print(f"Best value for L1 penalty: {lambdas[np.argmin(loss_x1)]}")
     print(f"Best value for L2 penalty: {lambdas[np.argmin(loss_x2)]}")
     plot_loss(lambdas, loss_x1, loss_x2, name, "λ1")
-    peaks = np.array(peaks)
-    plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), peaks[:, 0], peaks[:, 1], threshold, "λ1")
+    nb_peaks_found = np.array(nb_peaks_found)
+    plot_peaks(lambdas, len(np.argwhere(s.sparse >= 2)), nb_peaks_found[:, 0], nb_peaks_found[:, 1], threshold, "λ1")
+
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    fig.canvas.manager.set_window_title("Following some pixel of the sparse component")
+    ax.set_title("Intensity of some pixel of the sparse component")
+    for i in range(non_peaks[0].size):
+        line1, = ax.plot(lambdas, non_peaks[:, i], color='tab:orange')
+    for i in range(peaks[0].size):
+        line2, = ax.plot(lambdas, peaks[:, i], color='tab:blue')
+
+    ax.set_ylabel("Pixel value")
+    ax.set_xlabel("λ1")
+    ax.legend([line1, line2], ["Zeros", "Peaks"])
 
 
-def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_max: float, nb: int, lambda1: float,
-                 operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50.,
-                 threshold: float = 1.) -> None:
+def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_max: float, nb: int, lambda1: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.) -> None:
     """
     Test the lambda2 parameter of some fix parameters. It makes nb reconstructions and plot the loss of each
     component. It also plots the number of peaks recovered in the sparse component.
@@ -247,8 +272,8 @@ def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_ma
         Maximum value of λ2
     nb : int
         Number of reconstructions made
-    lambda1 : float
-        Weight of the L1 penalty
+    lambda1 : float | None
+        Weight of the L1 penalty, if None use lambda1 = 1/5 * lambda2
     operator_l2 : None | str | LinearOperator
         Operator used in the L2 penalty
     psnr : float
@@ -264,12 +289,18 @@ def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_ma
     peaks = []
     lambdas = np.linspace(lambda2_min, lambda2_max, nb)
     for l in lambdas:
-        x1, x2 = solve(s, lambda1, l, op_l2)
+        if lambda1 is None:
+            x1, x2 = solve(s, l / 5, l, op_l2)
+        else:
+            x1, x2 = solve(s, lambda1, l, op_l2)
         loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
         peaks.append(peaks_found(s.sparse, x1, threshold))
 
-    name = f"λ1:{lambda1:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    if lambda1 is None:
+        name = f"λ1: λ2/5, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
+    else:
+        name = f"λ1:{lambda1:.2f}, {L:.1%} measurements, PSNR:{psnr:.0f}, L2 operator:{operator_l2.__str__()}"
     print(f"Best value L1: {lambdas[np.argmin(loss_x1)]}")
     print(f"Best value L2: {lambdas[np.argmin(loss_x2)]}")
     plot_loss(lambdas, loss_x1, loss_x2, name, "λ2")
