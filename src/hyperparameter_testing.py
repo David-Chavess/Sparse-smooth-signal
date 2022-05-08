@@ -228,7 +228,7 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
             x1, x2 = solve(s, l, lambda2, op_l2)
         loss_x1.append(wasserstein_dist(s.sparse, x1))
         loss_x2.append(nmse(s.smooth, x2))
-        nb_peaks_found.append(peaks_found(s.sparse, x1, 1))
+        nb_peaks_found.append(peaks_found(s.sparse, x1, threshold))
         peaks[i] = x1.ravel()[samples_peaks]
         non_peaks[i] = x1.ravel()[samples_non_peaks]
 
