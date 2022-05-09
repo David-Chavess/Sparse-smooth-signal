@@ -1,2 +1,3 @@
-# sparse_smooth_signal
-Package to analyze sparse and smooth signal and resolve inverse problem
+# Analyze Sparse + Smooth signal with an inverse problem
+This is the repository of my bachelor's project. The project goal is to analyze the reconstructions of _Sparse + Smooth_ signals from some measurements made by some linear operator. More specificly, in my project I have apply this to radio astronomy where we need to reconstruct images from radio measurements. Here the _Sparse + Smooth_ signal is an image that representes the light intensity from space that we want to recover, the measurements are made by a DFT where we keep only some lines. My goal is to reconstruct the original image from these few measurements and anaylse how this _Sparse + Smooth_ assumption on the original signal inpactes the reconstructed signal. The project focus on the practical part, since the theorcal part has already been study and formalize by [Debarre, T., Aziznejad, S., and Unser, M., “Continuous-Domain Formulation of Inverse Problems for Composite Sparse-Plus-Smooth Signals”](https://arxiv.org/abs/2103.13380)
+
