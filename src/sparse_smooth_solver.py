@@ -31,6 +31,8 @@ class SparseSmoothSolver(Solver):
             Weight of the L2 regularization term.
         l2operator: None | LinearOperator
             Operator used in the L2 regularization term if any.
+        positive_constrain: bool
+            If True, the smooth component solution is constrained to be positive.
         """
         super().__init__(y, operator)
 

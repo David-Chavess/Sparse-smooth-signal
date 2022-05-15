@@ -77,7 +77,6 @@ def solve(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator
     x2 = x2.reshape(s.dim)
 
     x1[x1 < 0] = 0
-    # x2 += off_set_smooth(s.smooth, x2)
 
     return x1, x2
 
@@ -113,8 +112,6 @@ def solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
     x_sparse = x_sparse.reshape(s.dim)
     x_smooth = x_smooth.reshape(s.dim)
 
-    plot_reconstruction(s.sparse, s.smooth, x_sparse, x_smooth, name)
-
     m = np.max(np.abs(s.H.adjoint(s.y)))
     lambda1 = lambda1 * m
     lambda2 = lambda2 * m
@@ -133,12 +130,6 @@ def solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
     x_lasso, _ = sol.solve()
     x_lasso = x_lasso.reshape(s.dim)
 
-    plot_solvers(x_sparse + x_smooth, x_tik, x_tik_op, x_lasso, name)
-
-    peaks_found(s.sparse, x_sparse, 1)
-    peaks_found(s.sparse, x_tik, 1)
-    peaks_found(s.sparse, x_tik_op, 1)
-    peaks_found(s.sparse, x_lasso, 1)
     return x_sparse, x_smooth, x_tik, x_tik_op, x_lasso
 
 
@@ -167,7 +158,7 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
     for op in operators_l2:
         op_l2 = get_L2_operator(s.dim, op)
         for p in psnr:
-            s.psnr = psnr
+            s.psnr = p
             for l1 in lambdas1:
                 for l2 in lambdas2:
                     name = f"λ1:{l1:.2f}, λ2:{l2:.2f}, {L:.1%} measurements, PSNR:{p:.0f}, L2 operator:{op.__str__()}"
@@ -179,7 +170,9 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
     print_best(loss_x1, loss_x2)
 
 
-def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_max: float, nb: int, lambda2: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.) -> None:
+def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_max: float, nb: int,
+                 lambda2: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian",
+                 psnr: float = 50., threshold: float = 1.) -> None:
     """
     Test the lambda1 parameter of some fix parameters. It makes nb reconstructions and plot the loss of each
     component. It also plots the number of peaks recovered in the sparse component.
@@ -255,7 +248,9 @@ def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_ma
     ax.legend([line1, line2], ["Zeros", "Peaks"])
 
 
-def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_max: float, nb: int, lambda1: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian", psnr: float = 50., threshold: float = 1.) -> None:
+def test_lambda2(s: SparseSmoothSignal, L: float, lambda2_min: float, lambda2_max: float, nb: int,
+                 lambda1: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian",
+                 psnr: float = 50., threshold: float = 1.) -> None:
     """
     Test the lambda2 parameter of some fix parameters. It makes nb reconstructions and plot the loss of each
     component. It also plots the number of peaks recovered in the sparse component.
