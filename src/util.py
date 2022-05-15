@@ -72,11 +72,14 @@ def get_L2_operator(dim: Tuple[int, int], op_l2: None | str | LinearOperator) ->
     if isinstance(op_l2, str):
         if op_l2 == "Gradient":
             op = Gradient(dim, kind='forward')
+            op.lipschitz_cst = 2.85
+            op.diff_lipschitz_cst = 2.85
         elif op_l2 == "Laplacian":
             op = Laplacian(dim)
+            op.lipschitz_cst = 8
+            op.diff_lipschitz_cst = 8
         else:
             raise ValueError("Operator name is invalid")
-        op.compute_lipschitz_cst(tol=1e-3)
         return op
     else:
         return op_l2
@@ -277,8 +280,7 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
-    im_p = ax1.imshow(x_sparse, vmin=0,
-                      vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im_p = ax1.imshow(x_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax1.axis('off')
     ax1.set_title("Original Sparse")
 
@@ -286,8 +288,7 @@ def plot_reconstruction(x_sparse: np.ndarray, x_smooth: np.ndarray, x_reconst_sp
     ax2.axis('off')
     ax2.set_title("Original Smooth")
 
-    im = ax3.imshow(x_reconst_sparse, vmin=0,
-                    vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE + SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
+    im = ax3.imshow(x_reconst_sparse, vmin=0, vmax=SparseSmoothSignal.MAX_SPARSE_AMPLITUDE)
     ax3.axis('off')
     ax3.set_title("Reconstructed Sparse")
 
