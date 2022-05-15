@@ -17,7 +17,7 @@ class SparseSmoothSolver(Solver):
     """
 
     def __init__(self, y: np.ndarray, operator: LinearOperator, lambda1: float = 0.01, lambda2: float = 0.1,
-                 l2operator: None | LinearOperator = None) -> None:
+                 l2operator: None | LinearOperator = None, positive_constrain: bool = True) -> None:
         """
         Parameters
         ----------
@@ -37,6 +37,7 @@ class SparseSmoothSolver(Solver):
         self.lambda1 = lambda1
         self.lambda2 = lambda2
         self.l2operator = l2operator
+        self.positive_constrain = positive_constrain
 
     def solve(self) -> (np.ndarray, np.ndarray):
 
@@ -60,7 +61,10 @@ class SparseSmoothSolver(Solver):
         if self.lambda1 == 0.0:
             G = NullProximableFunctional(2*H.shape[1])
         else:
-            G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NonNegativeOrthant(H.shape[1]))
+            if self.positive_constrain:
+                G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NonNegativeOrthant(H.shape[1]))
+            else:
+                G = ProxFuncHStack(self.lambda1 * L1Norm(H.shape[1]), NullProximableFunctional(H.shape[1]), n_jobs=-1)
 
         apgd = APGD(2 * self.operator.shape[1], F=F, G=G, acceleration='CD', verbose=None)
         estimate, converged, diagnostics = apgd.iterate()
