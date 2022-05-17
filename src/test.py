@@ -17,10 +17,10 @@ class Test:
     def test_noise(self) -> None:
         s = SparseSmoothSignal(self.dim, measurement_operator=-1, psnr=80)
         psnr = 20 * np.log10(np.max(np.abs(s.y0))) - 10 * np.log10(np.var(s.y - s.y0))
-        assert np.allclose(psnr, 80, atol=0.1)
-        s = SparseSmoothSignal(self.dim, measurement_operator=-1, psnr=0)
+        assert np.allclose(psnr, 80, atol=0.1, rtol=0.1)
+        s.psnr = 0.
         psnr = 20 * np.log10(np.max(np.abs(s.y0))) - 10 * np.log10(np.var(s.y - s.y0))
-        assert np.allclose(psnr, 0, atol=0.1)
+        assert np.allclose(psnr, 0, atol=0.1, rtol=0.1)
 
     def test_cache(self) -> None:
         s = SparseSmoothSignal(self.dim, measurement_operator=-1)
