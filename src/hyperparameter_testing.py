@@ -82,8 +82,8 @@ def solve(s: SparseSmoothSignal, l1: float, l2: float, op: None | LinearOperator
 
 
 def solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
-            operator_l2: None | str | LinearOperator = "Laplacian",
-            name: str = "") -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+            operator_l2: None | str | LinearOperator = "Laplacian") -> Tuple[
+            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Solve the inverse problem for a simulated signal s with different solvers. It uses Lasso, Tikhonov with and without
     operator and our "Sparse + smooth" solver. Used to compare the performance of each one.
