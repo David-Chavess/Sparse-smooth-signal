@@ -98,8 +98,6 @@ def solvers(s: SparseSmoothSignal, lambda1: float, lambda2: float,
         Weight of the L2 penalty
     operator_l2 : None | str | LinearOperator
         Operator used in the L2 penalty
-    name : str
-        Name used as title, usually contains the parameters used in the solver
 
     Returns
     -------
