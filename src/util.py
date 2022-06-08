@@ -232,7 +232,7 @@ def plot_solvers(x: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso
     max_range : float
         Maximum value of the plot
     """
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
     fig.canvas.manager.set_window_title(f'Spare + Smooth Signal : {name}')
     fig.suptitle(name)
 
@@ -244,17 +244,17 @@ def plot_solvers(x: np.ndarray, x_tik: np.ndarray, x_tik_op: np.ndarray, x_lasso
     ax2.set_axis_off()
     ax2.set_title("Tikhonov without operator")
 
-    im = ax3.imshow(x_tik_op, vmin=min_range, vmax=max_range)
-    ax3.set_axis_off()
-    ax3.set_title("Tikhonov with operator")
-
-    im = ax4.imshow(x_lasso, vmin=min_range, vmax=max_range)
+    im = ax4.imshow(x_tik_op, vmin=min_range, vmax=max_range)
     ax4.set_axis_off()
-    ax4.set_title("Lasso")
+    ax4.set_title("Tikhonov with operator")
 
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.95,
+    im = ax3.imshow(x_lasso, vmin=min_range, vmax=max_range)
+    ax3.set_axis_off()
+    ax3.set_title("Lasso")
+
+    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.91,
                         wspace=0.02)
-    cb_ax = fig.add_axes([0.95, 0.05, 0.02, 0.85])
+    cb_ax = fig.add_axes([0.9, 0.05, 0.02, 0.85])
     cbar = fig.colorbar(im, cax=cb_ax)
 
 
@@ -393,7 +393,7 @@ def plot_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray,
     x_Laplacian : np.ndarray
         Reconstructed smooth image with the Laplacian
     """
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 5))
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
 
     im = ax1.imshow(x_smooth, vmin=0, vmax=SparseSmoothSignal.MAX_SMOOTH_AMPLITUDE)
     ax1.axis('off')
@@ -411,9 +411,9 @@ def plot_smooth(x_smooth: np.ndarray, x_None: np.ndarray, x_Gradian: np.ndarray,
     ax4.axis('off')
     ax4.set_title("Smooth with Laplacian")
 
-    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.92,
+    fig.subplots_adjust(bottom=0.05, top=0.9, left=0.01, right=0.91,
                         wspace=0.1, hspace=0.1)
-    cb_ax = fig.add_axes([0.93, 0.05, 0.02, 0.85])
+    cb_ax = fig.add_axes([0.92, 0.05, 0.02, 0.85])
     cbar = fig.colorbar(im, cax=cb_ax)
 
 
