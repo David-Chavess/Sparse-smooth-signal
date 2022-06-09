@@ -168,6 +168,42 @@ def test_hyperparameters(s: SparseSmoothSignal, L: float, lambdas1: List[float],
     print_best(loss_x1, loss_x2)
 
 
+def test_tuning_parameters(s: SparseSmoothSignal, lambdas1: List[float], lambdas2: List[float],
+                           operators_l2: None | str | LinearOperator, psnr: float) -> None:
+    """
+    Solve and plot all reconstruction made by the combination of all lambda1 and lambda2 parameters given.
+
+    Parameters
+    ----------
+    s : SparseSmoothSignal
+        Simulated signal to reconstruct
+    lambdas1 : List[float]
+        Weights of the L1 penalty
+    lambdas2 : List[float]
+        Weights of the L1 penalty
+    operators_l2 : None | str | LinearOperator
+        Operator used in the L2 penalty
+    psnr : float
+        PSNR of the measurements
+    """
+
+    plot_2_reconstruction(s.sparse, s.smooth, "Original")
+
+    loss_x1 = {}
+    loss_x2 = {}
+    op_l2 = get_L2_operator(s.dim, operators_l2)
+    s.psnr = psnr
+    for l1 in lambdas1:
+        for l2 in lambdas2:
+            name = f"λ1: {l1:.2f}   λ2: {l2:.2f}"
+            x1, x2 = solve(s, l1, l2, op_l2)
+            loss_x1[name] = wasserstein_dist(s.sparse, x1)
+            loss_x2[name] = nmse(s.smooth, x2)
+            plot_2_reconstruction(x1, x2, name)
+
+    print_best(loss_x1, loss_x2)
+
+
 def test_lambda1(s: SparseSmoothSignal, L: float, lambda1_min: float, lambda1_max: float, nb: int,
                  lambda2: float | None = None, operator_l2: None | str | LinearOperator = "Laplacian",
                  psnr: float = 50., threshold: float = 1.) -> None:
